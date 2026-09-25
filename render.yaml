@@ -11,3 +11,6 @@ services:
         value: 20
       - key: MONGODB_URI
         sync: false
+      - key: JWT_SECRET
+        sync: false
+

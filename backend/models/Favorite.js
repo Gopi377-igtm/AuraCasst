@@ -2,6 +2,11 @@ const mongoose = require('mongoose');
 
 const favoriteSchema = new mongoose.Schema(
   {
+    user: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
     name: {
       type: String,
       required: true,
@@ -34,7 +39,6 @@ const favoriteSchema = new mongoose.Schema(
   }
 );
 
-// Prevent duplicate coordinates
-favoriteSchema.index({ latitude: 1, longitude: 1 }, { unique: true });
+favoriteSchema.index({ user: 1, latitude: 1, longitude: 1 });
 
 module.exports = mongoose.model('Favorite', favoriteSchema);

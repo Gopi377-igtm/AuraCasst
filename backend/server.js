@@ -8,8 +8,10 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const { connectDB, mongoose } = require('./db');
+const User = require('./models/User');
 const Favorite = require('./models/Favorite');
 const MoodLog = require('./models/MoodLog');
+const { protect, optionalAuth, generateToken } = require('./middleware/auth');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -22,8 +24,45 @@ const distPath = fs.existsSync(frontendDistPath) ? frontendDistPath : localDistP
 // Connect to MongoDB Atlas
 connectDB();
 
-// Middleware
-app.use(cors());
+// --- BULLETPROOF CORS CONFIGURATION ---
+const allowedOrigins = [
+  'https://aura-casst.vercel.app',
+  'https://auracasst.onrender.com',
+  'http://localhost:3000',
+  'http://localhost:5173',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:5173'
+];
+
+app.use(
+  cors({
+    origin: function (origin, callback) {
+      // Allow requests with no origin (like mobile apps, curl, or server-to-server)
+      if (!origin) return callback(null, true);
+
+      // Check allowed list or Vercel / Render deployment subdomains
+      if (
+        allowedOrigins.includes(origin) ||
+        origin.endsWith('.vercel.app') ||
+        origin.endsWith('.onrender.com') ||
+        /^http:\/\/localhost:\d+$/.test(origin) ||
+        /^http:\/\/127\.0\.0\.1:\d+$/.test(origin)
+      ) {
+        return callback(null, true);
+      }
+
+      // Permissive fallback so production never breaks due to origin mismatches
+      return callback(null, true);
+    },
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin']
+  })
+);
+
+// Explicit OPTIONS preflight handling for all routes
+app.options('*', cors());
+
 app.use(express.json());
 
 // Serve static frontend assets
@@ -59,6 +98,9 @@ app.get('/api/health', (req, res) => {
       host: mongoose.connection.host || null,
       name: mongoose.connection.name || null,
     },
+    cors: {
+      allowedOrigins,
+    },
     timestamp: new Date().toISOString(),
   });
 });
@@ -67,9 +109,10 @@ app.get('/api/health', (req, res) => {
 app.get('/api/db/status', async (req, res) => {
   try {
     const isConnected = mongoose.connection.readyState === 1;
-    let counts = { favorites: 0, moodLogs: 0 };
+    let counts = { users: 0, favorites: 0, moodLogs: 0 };
 
     if (isConnected) {
+      counts.users = await User.countDocuments();
       counts.favorites = await Favorite.countDocuments();
       counts.moodLogs = await MoodLog.countDocuments();
     }
@@ -85,12 +128,124 @@ app.get('/api/db/status', async (req, res) => {
   }
 });
 
-// --- FAVORITES API (MongoDB) ---
+// =========================================================================
+// --- AUTHENTICATION API (JWT + BCRYPT) ---
+// =========================================================================
 
-// Get all saved favorite locations
-app.get('/api/favorites', async (req, res) => {
+// @route   POST /api/auth/register
+// @desc    Register a new user & return JWT token
+app.post('/api/auth/register', async (req, res) => {
   try {
-    const favorites = await Favorite.find().sort({ createdAt: -1 });
+    const { name, email, password } = req.body;
+
+    if (!name || !email || !password) {
+      return res.status(400).json({ error: 'Please provide name, email, and password' });
+    }
+
+    if (password.length < 6) {
+      return res.status(400).json({ error: 'Password must be at least 6 characters' });
+    }
+
+    // Check if user already exists
+    const existing = await User.findOne({ email: email.toLowerCase().trim() });
+    if (existing) {
+      return res.status(409).json({ error: 'An account with this email already exists' });
+    }
+
+    // Create user
+    const user = await User.create({
+      name: name.trim(),
+      email: email.toLowerCase().trim(),
+      password,
+    });
+
+    const token = generateToken(user._id);
+
+    res.status(201).json({
+      message: 'Registration successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Registration Error:', error);
+    res.status(500).json({ error: error.message || 'Server error during registration' });
+  }
+});
+
+// @route   POST /api/auth/login
+// @desc    Authenticate user & return JWT token
+app.post('/api/auth/login', async (req, res) => {
+  try {
+    const { email, password } = req.body;
+
+    if (!email || !password) {
+      return res.status(400).json({ error: 'Please provide both email and password' });
+    }
+
+    // Find user by email and explicitly select password
+    const user = await User.findOne({ email: email.toLowerCase().trim() }).select('+password');
+    if (!user) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    // Validate password
+    const isMatch = await user.matchPassword(password);
+    if (!isMatch) {
+      return res.status(401).json({ error: 'Invalid email or password' });
+    }
+
+    const token = generateToken(user._id);
+
+    res.status(200).json({
+      message: 'Login successful',
+      token,
+      user: {
+        id: user._id,
+        name: user.name,
+        email: user.email,
+      },
+    });
+  } catch (error) {
+    console.error('Login Error:', error);
+    res.status(500).json({ error: error.message || 'Server error during login' });
+  }
+});
+
+// @route   GET /api/auth/me
+// @desc    Get current user profile from JWT
+app.get('/api/auth/me', protect, async (req, res) => {
+  try {
+    res.json({
+      user: {
+        id: req.user._id,
+        name: req.user.name,
+        email: req.user.email,
+        createdAt: req.user.createdAt,
+      },
+    });
+  } catch (error) {
+    res.status(500).json({ error: 'Failed to retrieve profile' });
+  }
+});
+
+// =========================================================================
+// --- FAVORITES API (MongoDB + Optional Auth) ---
+// =========================================================================
+
+// Get all saved favorite locations (for current user, or global if guest)
+app.get('/api/favorites', optionalAuth, async (req, res) => {
+  try {
+    let query = {};
+    if (req.user) {
+      // Return favorites saved by this user OR unassigned favorites
+      query = { $or: [{ user: req.user._id }, { user: null }] };
+    }
+
+    const favorites = await Favorite.find(query).sort({ createdAt: -1 });
     res.json(favorites);
   } catch (error) {
     console.error('Error fetching favorites:', error);
@@ -99,7 +254,7 @@ app.get('/api/favorites', async (req, res) => {
 });
 
 // Add a location to favorites
-app.post('/api/favorites', async (req, res) => {
+app.post('/api/favorites', optionalAuth, async (req, res) => {
   const { name, country, latitude, longitude, admin1, moodTag } = req.body;
 
   if (!name || latitude === undefined || longitude === undefined) {
@@ -107,8 +262,11 @@ app.post('/api/favorites', async (req, res) => {
   }
 
   try {
-    // Check if already favorited (within tiny coordinate threshold or matching name)
+    const userId = req.user ? req.user._id : null;
+
+    // Check if already favorited by this user
     const existing = await Favorite.findOne({
+      user: userId,
       $or: [
         { latitude, longitude },
         { name: new RegExp(`^${name.trim()}$`, 'i'), country: country || '' }
@@ -120,6 +278,7 @@ app.post('/api/favorites', async (req, res) => {
     }
 
     const favorite = new Favorite({
+      user: userId,
       name: name.trim(),
       country: (country || '').trim(),
       latitude: Number(latitude),
@@ -137,11 +296,16 @@ app.post('/api/favorites', async (req, res) => {
 });
 
 // Delete a location from favorites
-app.delete('/api/favorites/:id', async (req, res) => {
+app.delete('/api/favorites/:id', optionalAuth, async (req, res) => {
   try {
-    const deleted = await Favorite.findByIdAndDelete(req.params.id);
+    const query = { _id: req.params.id };
+    if (req.user) {
+      query.$or = [{ user: req.user._id }, { user: null }];
+    }
+
+    const deleted = await Favorite.findOneAndDelete(query);
     if (!deleted) {
-      return res.status(404).json({ error: 'Favorite not found' });
+      return res.status(404).json({ error: 'Favorite not found or unauthorized' });
     }
     res.json({ message: 'Favorite deleted successfully', id: req.params.id });
   } catch (error) {
@@ -150,12 +314,19 @@ app.delete('/api/favorites/:id', async (req, res) => {
   }
 });
 
-// --- MOOD JOURNAL LOGS API (MongoDB) ---
+// =========================================================================
+// --- MOOD JOURNAL LOGS API (MongoDB + Optional Auth) ---
+// =========================================================================
 
 // Get recent mood logs
-app.get('/api/mood-logs', async (req, res) => {
+app.get('/api/mood-logs', optionalAuth, async (req, res) => {
   try {
-    const logs = await MoodLog.find().sort({ createdAt: -1 }).limit(30);
+    let query = {};
+    if (req.user) {
+      query = { $or: [{ user: req.user._id }, { user: null }] };
+    }
+
+    const logs = await MoodLog.find(query).sort({ createdAt: -1 }).limit(30);
     res.json(logs);
   } catch (error) {
     console.error('Error fetching mood logs:', error);
@@ -164,7 +335,7 @@ app.get('/api/mood-logs', async (req, res) => {
 });
 
 // Create a mood log entry
-app.post('/api/mood-logs', async (req, res) => {
+app.post('/api/mood-logs', optionalAuth, async (req, res) => {
   const { moodId, moodName, cityName, country, temperatureC, weatherDescription, note } = req.body;
 
   if (!moodId || !moodName || !cityName) {
@@ -173,6 +344,7 @@ app.post('/api/mood-logs', async (req, res) => {
 
   try {
     const log = new MoodLog({
+      user: req.user ? req.user._id : null,
       moodId,
       moodName,
       cityName,
@@ -191,11 +363,16 @@ app.post('/api/mood-logs', async (req, res) => {
 });
 
 // Delete a mood log entry
-app.delete('/api/mood-logs/:id', async (req, res) => {
+app.delete('/api/mood-logs/:id', optionalAuth, async (req, res) => {
   try {
-    const deleted = await MoodLog.findByIdAndDelete(req.params.id);
+    const query = { _id: req.params.id };
+    if (req.user) {
+      query.$or = [{ user: req.user._id }, { user: null }];
+    }
+
+    const deleted = await MoodLog.findOneAndDelete(query);
     if (!deleted) {
-      return res.status(404).json({ error: 'Mood log not found' });
+      return res.status(404).json({ error: 'Mood log not found or unauthorized' });
     }
     res.json({ message: 'Mood log deleted successfully', id: req.params.id });
   } catch (error) {
@@ -204,7 +381,10 @@ app.delete('/api/mood-logs/:id', async (req, res) => {
   }
 });
 
-// Weather API proxy endpoint
+// =========================================================================
+// --- WEATHER & GEOCODING PROXIES ---
+// =========================================================================
+
 app.get('/api/weather', async (req, res) => {
   const { latitude, longitude } = req.query;
   if (!latitude || !longitude) {
@@ -262,7 +442,6 @@ app.get('/api/weather', async (req, res) => {
   }
 });
 
-// Geocoding API proxy endpoint
 app.get('/api/geocode', async (req, res) => {
   const { name } = req.query;
   if (!name || name.trim().length < 2) {

@@ -24,9 +24,11 @@
   "author": "Gopi377-igtm",
   "license": "MIT",
   "dependencies": {
+    "bcryptjs": "^2.4.3",
     "cors": "^2.8.6",
     "dotenv": "^18.0.3",
     "express": "^4.22.3",
+    "jsonwebtoken": "^9.0.2",
     "mongoose": "^9.10.2"
   },
   "engines": {

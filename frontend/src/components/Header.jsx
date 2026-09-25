@@ -5,7 +5,10 @@ import {
   VolumeX,
   Star,
   BookHeart,
-  Database
+  Database,
+  LogIn,
+  LogOut,
+  User as UserIcon
 } from 'lucide-react';
 
 export default function Header({
@@ -16,7 +19,10 @@ export default function Header({
   onToggleUnit,
   favoritesCount,
   onOpenFavorites,
-  onOpenJournal
+  onOpenJournal,
+  user,
+  onOpenAuth,
+  onLogout
 }) {
   return (
     <header className="flex flex-col md:flex-row items-center justify-between gap-4 pb-8 border-b border-white/10">
@@ -40,7 +46,7 @@ export default function Header({
         </div>
       </div>
 
-      {/* Control Buttons & MongoDB Atlas Status */}
+      {/* Control Buttons, Auth & MongoDB Atlas Status */}
       <div className="flex items-center flex-wrap gap-2.5">
         {/* MongoDB Atlas Indicator */}
         <div
@@ -61,7 +67,9 @@ export default function Header({
             }`}
           />
           <Database className="w-3.5 h-3.5" />
-          <span>{mongoStatus.connected ? 'Atlas Online' : 'Atlas Offline'}</span>
+          <span className="hidden sm:inline">
+            {mongoStatus.connected ? 'Atlas Online' : 'Atlas Offline'}
+          </span>
         </div>
 
         {/* Ambient Soundscape Synthesizer */}
@@ -113,6 +121,40 @@ export default function Header({
           <BookHeart className="w-4 h-4 text-purple-400" />
           <span className="hidden sm:inline">Mood Journal</span>
         </button>
+
+        {/* User Account / Auth Controls */}
+        {user ? (
+          <div className="flex items-center gap-2 pl-1 border-l border-white/10">
+            <div
+              title={`Logged in as ${user.name} (${user.email})`}
+              className="flex items-center gap-2 px-3 py-1.5 rounded-2xl glass-card bg-white/5 border border-white/15"
+            >
+              <div className="w-6 h-6 rounded-full bg-gradient-to-tr from-amber-400 to-rose-400 flex items-center justify-center text-slate-950 font-bold text-xs">
+                {user.name ? user.name.charAt(0).toUpperCase() : 'U'}
+              </div>
+              <span className="text-xs font-semibold text-white max-w-[100px] truncate hidden sm:inline">
+                {user.name}
+              </span>
+            </div>
+            <button
+              onClick={onLogout}
+              title="Sign Out"
+              className="p-2.5 rounded-2xl glass-card hover:bg-rose-500/20 hover:border-rose-400/50 text-slate-300 hover:text-rose-300 transition-all flex items-center gap-1.5 text-xs"
+            >
+              <LogOut className="w-4 h-4" />
+              <span className="hidden md:inline">Sign Out</span>
+            </button>
+          </div>
+        ) : (
+          <button
+            onClick={onOpenAuth}
+            title="Sign In / Register Account"
+            className="p-2.5 px-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center gap-1.5"
+          >
+            <LogIn className="w-4 h-4 text-slate-950" />
+            <span>Sign In</span>
+          </button>
+        )}
       </div>
     </header>
   );

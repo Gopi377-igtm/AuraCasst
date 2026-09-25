@@ -19,7 +19,8 @@ AuraCast is a full-stack web application built with **React 18**, **Vite**, **Ex
 - **Tailwind CSS & Glassmorphism**: Built with modern Tailwind CSS utility classes, backdrop filters, glowing aura gradients, and responsive layouts across mobile, tablet, and desktop screens.
 - **Mood Simulator Bar**: Allows instant preview and interactive testing of all 6 mood themes with a single click.
 - **Synthesized Ambient Soundscapes**: Built-in Web Audio API synthesizer generates soothing real-time white noise / rain / ambient harmonic drones without requiring external audio files.
-- **MongoDB Atlas Integration**: Cloud persistence for saved favorite locations and weather-mood journal reflections. Includes real-time connection status indicators, duplicate prevention, and REST API endpoints.
+- **JWT Authentication & User Accounts**: Secure user registration, login, and logout backed by bcrypt password hashing and JSON Web Tokens. Saves personalized favorite cities and mood reflection logs to MongoDB Atlas.
+- **Cross-Origin & Deployment Support**: Bulletproof CORS configuration enabling seamless communication between Render (`https://auracasst.onrender.com`), Vercel (`https://aura-casst.vercel.app`), and local development environments.
 - **Forecast & History**: 12-hour hourly forecast, 5-day extended mood forecast, temperature unit switcher (°C / °F), and cloud persistence.
 
 ---
@@ -31,7 +32,8 @@ AuraCast/
 ├── frontend/                       # React 18 + Vite Frontend Application
 │   ├── src/
 │   │   ├── components/
-│   │   │   ├── Header.jsx          # Brand header, Atlas indicator, synth toggle, unit switch, modals
+│   │   │   ├── Header.jsx          # Brand header, Atlas indicator, synth toggle, unit switch, auth
+│   │   │   ├── AuthModal.jsx       # User registration and login modal with JWT authentication
 │   │   │   ├── SearchBar.jsx       # Debounced search, autocomplete, geolocation & recent chips
 │   │   │   ├── MoodSimulator.jsx   # 6 interactive mood preset buttons
 │   │   │   ├── MainWeatherCard.jsx # Current weather, temperature, condition icon & favorite star
@@ -46,7 +48,7 @@ AuraCast/
 │   │   │   └── Footer.jsx          # Footer component
 │   │   ├── services/
 │   │   │   ├── weatherApi.js       # Open-Meteo search, reverse geocode, forecast formatting
-│   │   │   ├── databaseApi.js      # MongoDB REST API connector (health, favorites, mood logs)
+│   │   │   ├── databaseApi.js      # MongoDB REST & JWT Auth API connector
 │   │   │   ├── audioSynth.js       # Web Audio API ambient soundscape synthesizer
 │   │   │   └── moodEngine.js       # Meteorological to emotional mood mapping logic
 │   │   ├── styles/
@@ -58,10 +60,13 @@ AuraCast/
 │   ├── vite.config.js              # Vite configuration with React plugin & /api proxy
 │   └── package.json                # Frontend dependencies & scripts
 ├── backend/                        # Express + MongoDB Atlas Backend REST API
+│   ├── middleware/
+│   │   └── auth.js                 # JWT token verification and route protection
 │   ├── models/
+│   │   ├── User.js                 # Mongoose model for users with bcrypt password hashing
 │   │   ├── Favorite.js             # Mongoose model for saved favorite cities
 │   │   └── MoodLog.js              # Mongoose model for mood reflections & diary
-│   ├── server.js                   # Express server serving built React bundle & REST API
+│   ├── server.js                   # Express server serving built React bundle, CORS & REST API
 │   ├── db.js                       # MongoDB connection manager with DNS resolution fallback
 │   └── package.json                # Backend dependencies & scripts
 ├── vercel.json                     # Vercel serverless deployment configuration

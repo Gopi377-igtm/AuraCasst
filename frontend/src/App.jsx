@@ -9,6 +9,7 @@ import MoodAnalysisCard from './components/MoodAnalysisCard';
 import DailyForecast from './components/DailyForecast';
 import FavoritesModal from './components/FavoritesModal';
 import MoodJournalModal from './components/MoodJournalModal';
+import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
 import WeatherCanvas from './components/WeatherCanvas';
 import { MOODS, evaluateMood } from './services/moodEngine';
@@ -37,6 +38,7 @@ export default function App() {
   const [mongoStatus, setMongoStatus] = useState({ connected: false });
   const [favorites, setFavorites] = useState([]);
   const [moodLogs, setMoodLogs] = useState([]);
+  const [user, setUser] = useState(null);
 
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
@@ -44,6 +46,7 @@ export default function App() {
 
   const [isFavoritesModalOpen, setIsFavoritesModalOpen] = useState(false);
   const [isJournalModalOpen, setIsJournalModalOpen] = useState(false);
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
 
   // Sync active mood attribute to document.body for dynamic CSS theme variables
   useEffect(() => {
@@ -52,21 +55,29 @@ export default function App() {
     }
   }, [mood]);
 
-  // Load initial MongoDB health & data
+  // Load initial MongoDB health & check authenticated user
   useEffect(() => {
-    const initDatabase = async () => {
+    const initApp = async () => {
       try {
         const health = await DatabaseAPI.getHealth();
         if (health.database) {
           setMongoStatus(health.database);
         }
+
+        // Check if existing JWT is valid
+        const currentUser = await DatabaseAPI.getCurrentUser();
+        if (currentUser) {
+          setUser(currentUser);
+        }
+
+        // Fetch favorites
         const favs = await DatabaseAPI.getFavorites();
         setFavorites(favs);
       } catch (err) {
-        console.warn('MongoDB init error:', err);
+        console.warn('App initialization error:', err);
       }
     };
-    initDatabase();
+    initApp();
   }, []);
 
   // Fetch weather for a given location
@@ -207,6 +218,35 @@ export default function App() {
     }
   };
 
+  // --- AUTHENTICATION HANDLERS ---
+  const handleAuthSuccess = async (mode, credentials) => {
+    let result;
+    if (mode === 'login') {
+      result = await DatabaseAPI.login(credentials);
+    } else {
+      result = await DatabaseAPI.register(credentials);
+    }
+
+    if (result && result.user) {
+      setUser(result.user);
+      // Reload favorites and mood logs for this user
+      const userFavs = await DatabaseAPI.getFavorites();
+      setFavorites(userFavs);
+      const userLogs = await DatabaseAPI.getMoodLogs();
+      setMoodLogs(userLogs);
+    }
+  };
+
+  const handleLogout = async () => {
+    DatabaseAPI.logout();
+    setUser(null);
+    // Reload guest favorites and logs
+    const favs = await DatabaseAPI.getFavorites();
+    setFavorites(favs);
+    const logs = await DatabaseAPI.getMoodLogs();
+    setMoodLogs(logs);
+  };
+
   // Check if current location is favorite
   const isCurrentFavorite = () => {
     if (!location) return false;
@@ -305,7 +345,7 @@ export default function App() {
 
       {/* Main Content Wrapper */}
       <div className="relative z-10 flex-grow flex flex-col max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
-        {/* Navigation & Controls Header */}
+        {/* Navigation, Auth & Controls Header */}
         <Header
           mongoStatus={mongoStatus}
           isAudioPlaying={isAudioPlaying}
@@ -315,6 +355,9 @@ export default function App() {
           favoritesCount={favorites.length}
           onOpenFavorites={() => setIsFavoritesModalOpen(true)}
           onOpenJournal={handleOpenJournal}
+          user={user}
+          onOpenAuth={() => setIsAuthModalOpen(true)}
+          onLogout={handleLogout}
         />
 
         {/* Search Bar & Auto-suggestions */}
@@ -392,6 +435,13 @@ export default function App() {
         moodLogs={moodLogs}
         onSaveLog={handleSaveMoodLog}
         onDeleteLog={handleDeleteMoodLog}
+      />
+
+      {/* JWT Authentication Modal (Register & Login) */}
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        onAuthSuccess={handleAuthSuccess}
       />
     </div>
   );
