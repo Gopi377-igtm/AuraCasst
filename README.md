@@ -28,41 +28,45 @@ AuraCast is a full-stack web application built with **React 18**, **Vite**, **Ex
 
 ```
 AuraCast/
-├── src/
-│   ├── components/
-│   │   ├── Header.jsx              # Brand header, Atlas indicator, synth toggle, unit switch, modals
-│   │   ├── SearchBar.jsx           # Debounced search, autocomplete, geolocation & recent chips
-│   │   ├── MoodSimulator.jsx       # 6 interactive mood preset buttons
-│   │   ├── MainWeatherCard.jsx     # Current weather, temperature, condition icon & favorite star
-│   │   ├── AtmosphericMetrics.jsx  # 6 atmospheric metrics (Humidity, Wind, UV, Pressure, Clouds, Rain)
-│   │   ├── HourlyForecast.jsx      # 12-hour horizontal forecast cards
-│   │   ├── MoodAnalysisCard.jsx    # Vibe analysis, activities, soundscape, copyable hex palette tokens
-│   │   ├── DailyForecast.jsx       # 5-day mood outlook with badges and temperature ranges
-│   │   ├── WeatherCanvas.jsx       # HTML5 Canvas atmospheric particle engine (rain, snow, rays, mist)
-│   │   ├── WeatherIcon.jsx         # Dynamic Lucide icon mapper
-│   │   ├── FavoritesModal.jsx      # MongoDB-backed favorite locations modal (select/delete)
-│   │   ├── MoodJournalModal.jsx    # MongoDB-backed mood reflection diary & log history
-│   │   └── Footer.jsx              # Footer component
-│   ├── services/
-│   │   ├── weatherApi.js           # Open-Meteo search, reverse geocode, forecast formatting
-│   │   ├── databaseApi.js          # MongoDB REST API connector (health, favorites, mood logs)
-│   │   ├── audioSynth.js           # Web Audio API ambient soundscape synthesizer
-│   │   └── moodEngine.js           # Meteorological to emotional mood mapping logic
-│   ├── styles/
-│   │   ├── style.css               # Glassmorphism, floating aura mesh orbs, scrollbar
-│   │   └── themes.css              # 6 dynamic mood gradient palettes & CSS custom properties
-│   ├── App.jsx                     # Top-level state coordinator & theme manager
-│   └── main.jsx                    # React 18 root mount
-├── models/
-│   ├── Favorite.js                 # Mongoose model for saved favorite cities
-│   └── MoodLog.js                  # Mongoose model for mood reflections & diary
-├── index.html                      # Main HTML scaffold mounting React via Vite
-├── vite.config.js                  # Vite configuration with React plugin & /api proxy
-├── server.js                       # Express server serving built React bundle & REST API
-├── db.js                           # MongoDB connection manager with DNS resolution fallback
+├── frontend/                       # React 18 + Vite Frontend Application
+│   ├── src/
+│   │   ├── components/
+│   │   │   ├── Header.jsx          # Brand header, Atlas indicator, synth toggle, unit switch, modals
+│   │   │   ├── SearchBar.jsx       # Debounced search, autocomplete, geolocation & recent chips
+│   │   │   ├── MoodSimulator.jsx   # 6 interactive mood preset buttons
+│   │   │   ├── MainWeatherCard.jsx # Current weather, temperature, condition icon & favorite star
+│   │   │   ├── AtmosphericMetrics.jsx # 6 atmospheric metrics (Humidity, Wind, UV, Pressure, Clouds, Rain)
+│   │   │   ├── HourlyForecast.jsx  # 12-hour horizontal forecast cards
+│   │   │   ├── MoodAnalysisCard.jsx # Vibe analysis, activities, soundscape, copyable hex palette tokens
+│   │   │   ├── DailyForecast.jsx   # 5-day mood outlook with badges and temperature ranges
+│   │   │   ├── WeatherCanvas.jsx   # HTML5 Canvas atmospheric particle engine (rain, snow, rays, mist)
+│   │   │   ├── WeatherIcon.jsx     # Dynamic Lucide icon mapper
+│   │   │   ├── FavoritesModal.jsx  # MongoDB-backed favorite locations modal (select/delete)
+│   │   │   ├── MoodJournalModal.jsx # MongoDB-backed mood reflection diary & log history
+│   │   │   └── Footer.jsx          # Footer component
+│   │   ├── services/
+│   │   │   ├── weatherApi.js       # Open-Meteo search, reverse geocode, forecast formatting
+│   │   │   ├── databaseApi.js      # MongoDB REST API connector (health, favorites, mood logs)
+│   │   │   ├── audioSynth.js       # Web Audio API ambient soundscape synthesizer
+│   │   │   └── moodEngine.js       # Meteorological to emotional mood mapping logic
+│   │   ├── styles/
+│   │   │   ├── style.css           # Glassmorphism, floating aura mesh orbs, scrollbar
+│   │   │   └── themes.css          # 6 dynamic mood gradient palettes & CSS custom properties
+│   │   ├── App.jsx                 # Top-level state coordinator & theme manager
+│   │   └── main.jsx                # React 18 root mount
+│   ├── index.html                  # Main HTML scaffold mounting React via Vite
+│   ├── vite.config.js              # Vite configuration with React plugin & /api proxy
+│   └── package.json                # Frontend dependencies & scripts
+├── backend/                        # Express + MongoDB Atlas Backend REST API
+│   ├── models/
+│   │   ├── Favorite.js             # Mongoose model for saved favorite cities
+│   │   └── MoodLog.js              # Mongoose model for mood reflections & diary
+│   ├── server.js                   # Express server serving built React bundle & REST API
+│   ├── db.js                       # MongoDB connection manager with DNS resolution fallback
+│   └── package.json                # Backend dependencies & scripts
 ├── vercel.json                     # Vercel serverless deployment configuration
 ├── .env.example                    # Template for environment configuration
-└── package.json                    # Project configuration and build scripts
+└── package.json                    # Root scripts for dev, build, and production start
 ```
 
 ---

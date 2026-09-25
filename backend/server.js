@@ -1,15 +1,23 @@
-require('dotenv').config();
-const express = require('express');
-const cors = require('cors');
 const path = require('path');
 const fs = require('fs');
+
+// Load .env from root or local
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
+require('dotenv').config();
+
+const express = require('express');
+const cors = require('cors');
 const { connectDB, mongoose } = require('./db');
 const Favorite = require('./models/Favorite');
 const MoodLog = require('./models/MoodLog');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
-const distPath = path.join(__dirname, 'dist');
+
+// Resolve frontend production dist path
+const frontendDistPath = path.join(__dirname, '..', 'frontend', 'dist');
+const localDistPath = path.join(__dirname, 'dist');
+const distPath = fs.existsSync(frontendDistPath) ? frontendDistPath : localDistPath;
 
 // Connect to MongoDB Atlas
 connectDB();
@@ -18,11 +26,16 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend assets (built React dist or root)
+// Serve static frontend assets
 if (fs.existsSync(distPath)) {
   app.use(express.static(distPath));
 } else {
-  app.use(express.static(path.join(__dirname)));
+  const frontendPath = path.join(__dirname, '..', 'frontend');
+  if (fs.existsSync(frontendPath)) {
+    app.use(express.static(frontendPath));
+  } else {
+    app.use(express.static(path.join(__dirname)));
+  }
 }
 
 // Health check endpoint with database status
@@ -275,10 +288,13 @@ app.get('/api/geocode', async (req, res) => {
 app.get('*', (req, res) => {
   const distIndex = path.join(distPath, 'index.html');
   if (fs.existsSync(distIndex)) {
-    res.sendFile(distIndex);
-  } else {
-    res.sendFile(path.join(__dirname, 'index.html'));
+    return res.sendFile(distIndex);
   }
+  const frontendIndex = path.join(__dirname, '..', 'frontend', 'index.html');
+  if (fs.existsSync(frontendIndex)) {
+    return res.sendFile(frontendIndex);
+  }
+  res.sendFile(path.join(__dirname, 'index.html'));
 });
 
 // Start server
