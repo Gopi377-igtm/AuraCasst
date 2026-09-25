@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AuraCast — Interactive Weather & Mood Visualizer</title>
+  
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            aura: {
+              dark: '#0a0d14',
+              surface: '#131b2e',
+              border: 'rgba(255, 255, 255, 0.1)',
+            }
+          },
+          fontFamily: {
+            sans: ['Plus Jakarta Sans', 'system-ui', 'sans-serif'],
+            display: ['Outfit', 'system-ui', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Plus+Jakarta+Sans:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+
+  <!-- Custom Styles & Themes -->
+  <link rel="stylesheet" href="css/themes.css">
+  <link rel="stylesheet" href="css/style.css">
+</head>
+<body data-mood="radiant" class="antialiased text-slate-100 flex flex-col min-h-screen selection:bg-amber-500 selection:text-slate-900">
+
+  <!-- Ambient Glowing Aura Mesh Background Orbs -->
+  <div class="aura-orb aura-orb-1"></div>
+  <div class="aura-orb aura-orb-2"></div>
+  <div class="aura-orb aura-orb-3"></div>
+
+  <!-- Dynamic Atmospheric Particle Canvas (Rain, Snow, Sunbeams, Mist) -->
+  <canvas id="weather-canvas"></canvas>
+
+  <!-- Main Content Wrapper -->
+  <div class="relative z-10 flex-grow flex flex-col max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
+    
+    <!-- Top Navigation Bar -->
+    <header class="flex flex-col md:flex-row items-center justify-between gap-4 pb-8 border-b border-white/10">
+      <!-- Brand Logo -->
+      <div class="flex items-center gap-3">
+        <div class="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/30 ring-1 ring-white/30">
+          <i data-lucide="sparkles" class="w-6 h-6 text-white"></i>
+        </div>
+        <div>
+          <div class="flex items-center gap-2">
+            <h1 class="text-2xl font-extrabold tracking-tight font-display bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">AuraCast</h1>
+            <span class="px-2 py-0.5 text-[10px] font-semibold tracking-wider uppercase rounded-full bg-white/10 border border-white/15 text-amber-300">Live</span>
+          </div>
+          <p class="text-xs text-slate-400">Interactive Weather & Emotional Mood Visualizer</p>
+        </div>
+      </div>
+
+      <!-- Search & Controls Bar -->
+      <div class="flex items-center gap-2.5 w-full md:w-auto">
+        <!-- Search Input -->
+        <div class="relative flex-grow md:w-80">
+          <form id="search-form" class="relative">
+            <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3.5 top-1/2 -translate-y-1/2"></i>
+            <input 
+              type="text" 
+              id="search-input" 
+              placeholder="Search city (e.g. Tokyo, Paris)..." 
+              autocomplete="off"
+              class="w-full pl-10 pr-10 py-2.5 rounded-full bg-white/10 border border-white/15 focus:border-amber-400 focus:bg-white/15 focus:outline-none text-sm placeholder:text-slate-400 text-white shadow-inner backdrop-blur-md transition-all"
+            >
+            <button type="button" id="geo-btn" title="Use current location" class="absolute right-2.5 top-1/2 -translate-y-1/2 p-1 text-slate-400 hover:text-amber-400 transition-colors">
+              <i data-lucide="crosshair" class="w-4 h-4"></i>
+            </button>
+          </form>
+
+          <!-- Autocomplete Dropdown -->
+          <div id="search-suggestions" class="hidden absolute top-full left-0 right-0 mt-2 rounded-2xl bg-slate-900/95 backdrop-blur-xl border border-white/15 shadow-2xl overflow-hidden z-50 divide-y divide-white/5">
+            <!-- Dynamically populated -->
+          </div>
+        </div>
+
+        <!-- Temperature Unit Switcher -->
+        <button id="unit-toggle-btn" class="px-3.5 py-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 text-sm font-semibold flex items-center gap-1 backdrop-blur-md transition-all">
+          <i data-lucide="thermometer" class="w-4 h-4 text-amber-400"></i>
+          <span id="unit-toggle-text">°C</span>
+        </button>
+
+        <!-- Ambient Audio Synthesizer Button -->
+        <button id="sound-toggle-btn" title="Toggle Mood Ambient Soundscape" class="p-2.5 rounded-full bg-white/10 hover:bg-white/20 border border-white/15 backdrop-blur-md transition-all text-slate-300 hover:text-white">
+          <i id="sound-toggle-icon" data-lucide="volume-x" class="w-5 h-5"></i>
+        </button>
+
+        <!-- MongoDB Favorites Button -->
+        <button id="favorites-toggle-btn" class="px-3 py-2.5 rounded-full bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 text-amber-300 text-sm font-semibold flex items-center gap-1.5 backdrop-blur-md transition-all shadow-sm" title="View MongoDB Favorites">
+          <i data-lucide="star" class="w-4 h-4 text-amber-400 fill-amber-400/20"></i>
+          <span class="hidden sm:inline text-xs">Favorites</span>
+          <span id="favorites-badge-count" class="px-1.5 py-0.2 rounded-full bg-amber-400/20 text-amber-300 text-[10px] font-bold">0</span>
+        </button>
+
+        <!-- MongoDB Mood Journal Button -->
+        <button id="journal-toggle-btn" class="px-3 py-2.5 rounded-full bg-purple-500/10 hover:bg-purple-500/20 border border-purple-500/30 text-purple-300 text-sm font-semibold flex items-center gap-1.5 backdrop-blur-md transition-all shadow-sm" title="Open Mood Journal (MongoDB)">
+          <i data-lucide="book-heart" class="w-4 h-4 text-purple-400"></i>
+          <span class="hidden sm:inline text-xs">Journal</span>
+        </button>
+
+        <!-- MongoDB Atlas Live Status Pill -->
+        <div id="mongo-status-pill" class="hidden md:flex items-center gap-1.5 px-3 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 text-xs font-semibold backdrop-blur-md transition-all cursor-default" title="MongoDB Atlas Cluster: Connected">
+          <span id="mongo-status-dot" class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="font-mono text-[10px] tracking-wide text-emerald-300 uppercase">MongoDB Atlas</span>
+        </div>
+      </div>
+    </header>
+
+    <!-- Mood Simulator Preset Bar -->
+    <section class="my-6">
+      <div class="flex items-center justify-between gap-2 mb-3">
+        <div class="flex items-center gap-2">
+          <i data-lucide="wand-2" class="w-4 h-4 text-amber-400"></i>
+          <h2 class="text-xs font-semibold uppercase tracking-wider text-slate-300">Mood Simulator & Aura Presets</h2>
+        </div>
+        <span class="text-[11px] text-slate-400 hidden sm:inline">Click any mood to preview atmospheric aura themes</span>
+      </div>
+
+      <div class="flex items-center gap-2.5 overflow-x-auto pb-2 scrollbar-none">
+        <button data-mood-id="radiant" class="mood-pill-btn active px-4 py-2 rounded-full bg-white/10 border border-white/15 text-xs font-medium flex items-center gap-2 whitespace-nowrap">
+          <span>☀️</span> Radiant
+        </button>
+        <button data-mood-id="serene" class="mood-pill-btn px-4 py-2 rounded-full bg-white/10 border border-white/15 text-xs font-medium flex items-center gap-2 whitespace-nowrap">
+          <span>🌤️</span> Serene
+        </button>
+        <button data-mood-id="cozy" class="mood-pill-btn px-4 py-2 rounded-full bg-white/10 border border-white/15 text-xs font-medium flex items-center gap-2 whitespace-nowrap">
+          <span>🌧️</span> Cozy
+        </button>
+        <button data-mood-id="gloomy" class="mood-pill-btn px-4 py-2 rounded-full bg-white/10 border border-white/15 text-xs font-medium flex items-center gap-2 whitespace-nowrap">
+          <span>🌫️</span> Gloomy
+        </button>
+        <button data-mood-id="stormy" class="mood-pill-btn px-4 py-2 rounded-full bg-white/10 border border-white/15 text-xs font-medium flex items-center gap-2 whitespace-nowrap">
+          <span>⛈️</span> Stormy
+        </button>
+        <button data-mood-id="tranquil" class="mood-pill-btn px-4 py-2 rounded-full bg-white/10 border border-white/15 text-xs font-medium flex items-center gap-2 whitespace-nowrap">
+          <span>❄️</span> Tranquil
+        </button>
+      </div>
+
+      <!-- Recent Searches Chips -->
+      <div class="flex items-center gap-2 mt-3 flex-wrap">
+        <span class="text-[11px] font-semibold text-slate-400 uppercase tracking-wider flex items-center gap-1">
+          <i data-lucide="history" class="w-3 h-3"></i> Recent:
+        </span>
+        <div id="recent-searches-container" class="flex items-center gap-2 flex-wrap">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </section>
+
+    <!-- Main Dashboard Grid -->
+    <main class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      
+      <!-- Left Column: Primary Weather & Mood Card (7 Columns) -->
+      <div class="lg:col-span-7 flex flex-col gap-6">
+        
+        <!-- Hero Weather & Mood Card -->
+        <div id="main-weather-card" class="glass-card rounded-3xl p-6 sm:p-8 relative overflow-hidden">
+          <!-- Aura Glow Accent -->
+          <div class="absolute -top-24 -right-24 w-60 h-60 rounded-full bg-gradient-to-br from-amber-400/20 to-orange-600/20 blur-3xl pointer-events-none"></div>
+
+          <!-- Location & Date Header -->
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <div class="flex items-center gap-2 flex-wrap">
+                <i data-lucide="map-pin" class="w-5 h-5 text-amber-400"></i>
+                <h2 id="location-name" class="text-2xl sm:text-3xl font-bold tracking-tight font-display text-white">San Francisco</h2>
+                <span id="location-country" class="text-sm font-medium text-slate-400">• United States</span>
+                <button id="fav-current-btn" title="Save to MongoDB Favorites" class="ml-1 p-1.5 rounded-xl bg-white/10 hover:bg-amber-400/20 border border-white/15 hover:border-amber-400/40 text-slate-400 hover:text-amber-400 transition-all">
+                  <i id="fav-current-icon" data-lucide="star" class="w-4 h-4"></i>
+                </button>
+              </div>
+              <p id="current-date" class="text-xs text-slate-300 mt-1 flex items-center gap-1.5">
+                <i data-lucide="calendar" class="w-3.5 h-3.5 opacity-70"></i> Loading date & time...
+              </p>
+            </div>
+
+            <!-- Mood Badge -->
+            <div id="mood-badge" class="aura-badge px-4 py-2 rounded-2xl flex items-center gap-2 text-sm font-semibold shadow-lg text-white">
+              <span>☀️</span> Radiant Aura
+            </div>
+          </div>
+
+          <!-- Temperature & Weather Visualizer Display -->
+          <div class="my-8 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-6">
+            <div>
+              <div class="flex items-baseline">
+                <span id="current-temp" class="text-6xl sm:text-7xl font-extrabold tracking-tighter font-display text-white">22°C</span>
+              </div>
+              <p id="feels-like-temp" class="text-sm text-slate-300 mt-1 font-medium">Feels like 23°C</p>
+              <div class="inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-xl bg-white/10 border border-white/15 text-sm font-medium text-white">
+                <span id="weather-condition-text">Clear Sky</span>
+              </div>
+            </div>
+
+            <!-- Floating Weather Icon Art -->
+            <div class="weather-icon-floating p-5 rounded-3xl bg-white/5 border border-white/15 shadow-2xl backdrop-blur-xl">
+              <div class="w-20 h-20 flex items-center justify-center text-amber-400">
+                <i data-lucide="sun" class="w-16 h-16 stroke-[1.5]"></i>
+              </div>
+            </div>
+          </div>
+
+          <!-- Hourly Forecast Horizontal Carousel -->
+          <div class="border-t border-white/10 pt-5">
+            <h3 class="text-xs font-semibold uppercase tracking-wider text-slate-300 mb-3 flex items-center gap-1.5">
+              <i data-lucide="clock" class="w-3.5 h-3.5 text-amber-400"></i> Hourly Aura Forecast
+            </h3>
+            <div id="hourly-forecast-container" class="flex items-center gap-3 overflow-x-auto pb-2 scrollbar-none">
+              <!-- Hourly items injected dynamically -->
+            </div>
+          </div>
+        </div>
+
+        <!-- Atmospheric Environmental Metrics Grid -->
+        <div class="grid grid-cols-2 sm:grid-cols-3 gap-4">
+          <!-- Metric: Humidity -->
+          <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-medium">Humidity</span>
+              <i data-lucide="droplets" class="w-4 h-4 text-sky-400"></i>
+            </div>
+            <div class="mt-3">
+              <span id="metric-humidity" class="text-xl font-bold text-white font-display">55%</span>
+              <p class="text-[10px] text-slate-400 mt-0.5">Atmospheric moisture</p>
+            </div>
+          </div>
+
+          <!-- Metric: Wind Speed -->
+          <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-medium">Wind Speed</span>
+              <i data-lucide="wind" class="w-4 h-4 text-teal-400"></i>
+            </div>
+            <div class="mt-3">
+              <span id="metric-wind" class="text-xl font-bold text-white font-display">12 km/h</span>
+              <p class="text-[10px] text-slate-400 mt-0.5">Gentle breeze</p>
+            </div>
+          </div>
+
+          <!-- Metric: UV Index -->
+          <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-medium">UV Index</span>
+              <i data-lucide="sun-medium" class="w-4 h-4 text-amber-400"></i>
+            </div>
+            <div class="mt-3">
+              <span id="metric-uv" class="text-xl font-bold text-white font-display">6 UV</span>
+              <p class="text-[10px] text-slate-400 mt-0.5">Moderate solar exposure</p>
+            </div>
+          </div>
+
+          <!-- Metric: Air Pressure -->
+          <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-medium">Air Pressure</span>
+              <i data-lucide="gauge" class="w-4 h-4 text-indigo-400"></i>
+            </div>
+            <div class="mt-3">
+              <span id="metric-pressure" class="text-xl font-bold text-white font-display">1014 hPa</span>
+              <p class="text-[10px] text-slate-400 mt-0.5">Stable barometric</p>
+            </div>
+          </div>
+
+          <!-- Metric: Cloud Cover -->
+          <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-medium">Cloud Cover</span>
+              <i data-lucide="cloud" class="w-4 h-4 text-slate-400"></i>
+            </div>
+            <div class="mt-3">
+              <span id="metric-cloud" class="text-xl font-bold text-white font-display">15%</span>
+              <p class="text-[10px] text-slate-400 mt-0.5">Scattered patches</p>
+            </div>
+          </div>
+
+          <!-- Metric: Precipitation -->
+          <div class="glass-card rounded-2xl p-4 flex flex-col justify-between">
+            <div class="flex items-center justify-between text-slate-400">
+              <span class="text-xs font-medium">Precipitation</span>
+              <i data-lucide="cloud-rain" class="w-4 h-4 text-blue-400"></i>
+            </div>
+            <div class="mt-3">
+              <span id="metric-precip" class="text-xl font-bold text-white font-display">0.0 mm</span>
+              <p class="text-[10px] text-slate-400 mt-0.5">Zero accumulation</p>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Right Column: Mood Insights, Soundscape & 5-Day Forecast (5 Columns) -->
+      <div class="lg:col-span-5 flex flex-col gap-6">
+        
+        <!-- Mood Psychological & Emotional Insights Card -->
+        <div class="glass-card rounded-3xl p-6 relative overflow-hidden">
+          <div class="flex items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2">
+              <i data-lucide="heart-pulse" class="w-5 h-5 text-rose-400"></i>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200">Atmospheric Mood Insight</h3>
+            </div>
+            <span class="text-[11px] px-2.5 py-1 rounded-full bg-white/10 text-slate-300 font-mono">Biophilic Sync</span>
+          </div>
+
+          <!-- Vibe Tagline -->
+          <h4 id="mood-vibe" class="text-lg font-bold font-display text-white mb-2">
+            Energized, Vibrant & Full of Life
+          </h4>
+
+          <!-- Mood Description -->
+          <p id="mood-description" class="text-xs sm:text-sm text-slate-300 leading-relaxed mb-4">
+            Golden sunbeams awaken natural dopamine, sharpening focus and inviting spontaneous exploration.
+          </p>
+
+          <!-- Recommendation Pill -->
+          <div class="p-3.5 rounded-2xl bg-white/5 border border-white/10 mb-4 flex items-start gap-3">
+            <div class="p-2 rounded-xl bg-amber-500/20 text-amber-300 shrink-0 mt-0.5">
+              <i data-lucide="compass" class="w-4 h-4"></i>
+            </div>
+            <div>
+              <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Suggested Activity</p>
+              <p id="mood-activity" class="text-xs font-medium text-slate-200 mt-0.5">
+                Go for an outdoor walk, soak in natural Vitamin D, or start a creative brainstorm.
+              </p>
+            </div>
+          </div>
+
+          <!-- Soundscape & Genre Recommendation -->
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
+            <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+              <p class="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
+                <i data-lucide="music" class="w-3 h-3 text-sky-400"></i> Soundscape
+              </p>
+              <p id="soundtrack-name" class="text-xs font-bold text-white mt-1 truncate">Summer Breeze & Birds</p>
+            </div>
+            <div class="p-3 rounded-xl bg-white/5 border border-white/10">
+              <p class="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
+                <i data-lucide="disc" class="w-3 h-3 text-purple-400"></i> Recommended Genre
+              </p>
+              <p id="music-genre-name" class="text-xs font-bold text-white mt-1 truncate">Upbeat Indie Pop</p>
+            </div>
+          </div>
+
+          <!-- Mood Color Palette Tokens -->
+          <div>
+            <p class="text-[11px] font-semibold uppercase tracking-wider text-slate-400 mb-2.5 flex items-center gap-1.5">
+              <i data-lucide="palette" class="w-3.5 h-3.5 text-amber-400"></i> Active Aura Palette (Click to Copy)
+            </p>
+            <div id="mood-palette-container" class="flex items-center gap-3">
+              <!-- Swatches injected dynamically -->
+            </div>
+          </div>
+
+          <!-- Log Mood to MongoDB Button -->
+          <button id="log-current-mood-btn" class="w-full mt-4 py-2.5 px-4 rounded-2xl bg-gradient-to-r from-purple-500/20 via-pink-500/20 to-purple-500/20 hover:from-purple-500/30 hover:to-pink-500/30 border border-purple-500/30 text-purple-200 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-2 backdrop-blur-md transition-all shadow-sm">
+            <i data-lucide="feather" class="w-4 h-4 text-purple-400"></i>
+            Log Mood in Journal (MongoDB)
+          </button>
+        </div>
+
+        <!-- 5-Day Mood Forecast -->
+        <div class="glass-card rounded-3xl p-6">
+          <div class="flex items-center justify-between gap-2 mb-4">
+            <div class="flex items-center gap-2">
+              <i data-lucide="calendar-days" class="w-5 h-5 text-sky-400"></i>
+              <h3 class="text-sm font-bold uppercase tracking-wider text-slate-200">5-Day Mood Outlook</h3>
+            </div>
+            <span class="text-[11px] text-slate-400">Extended Forecast</span>
+          </div>
+
+          <!-- Daily List Container -->
+          <div id="daily-forecast-container" class="flex flex-col gap-2.5">
+            <!-- Daily cards injected dynamically -->
+          </div>
+        </div>
+
+      </div>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="mt-12 pt-6 border-t border-white/10 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+      <div class="flex items-center gap-2">
+        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span>AuraCast Engine &copy; 2026 • Live Weather by Open-Meteo</span>
+      </div>
+      <div class="flex items-center gap-4">
+        <span class="hover:text-slate-200 transition-colors cursor-pointer">Privacy & Mood Metrics</span>
+        <span class="hover:text-slate-200 transition-colors cursor-pointer">API Status</span>
+        <span class="hover:text-slate-200 transition-colors cursor-pointer">Built with Tailwind CSS</span>
+      </div>
+    </footer>
+
+  </div>
+
+  <!-- Favorites Modal (MongoDB Powered) -->
+  <div id="favorites-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-lg rounded-3xl p-6 sm:p-7 border border-white/20 shadow-2xl relative">
+      <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-amber-500/20 text-amber-400">
+            <i data-lucide="star" class="w-5 h-5 fill-amber-400/20"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white font-display">Favorite Cities</h3>
+            <p class="text-xs text-slate-400">Saved securely in MongoDB Atlas</p>
+          </div>
+        </div>
+        <button id="close-favorites-modal" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <div id="favorites-list-container" class="max-h-80 overflow-y-auto divide-y divide-white/5 space-y-1 pr-1">
+        <!-- Rendered dynamically -->
+      </div>
+    </div>
+  </div>
+
+  <!-- Mood Journal Modal (MongoDB Powered) -->
+  <div id="journal-modal" class="fixed inset-0 z-50 bg-black/70 backdrop-blur-md hidden flex items-center justify-center p-4">
+    <div class="glass-card w-full max-w-xl rounded-3xl p-6 sm:p-7 border border-white/20 shadow-2xl relative flex flex-col max-h-[90vh]">
+      <div class="flex items-center justify-between pb-4 border-b border-white/10 mb-4 shrink-0">
+        <div class="flex items-center gap-2.5">
+          <div class="p-2 rounded-xl bg-purple-500/20 text-purple-400">
+            <i data-lucide="book-heart" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white font-display">Weather & Mood Journal</h3>
+            <p class="text-xs text-slate-400">Persistent emotion logs backed by MongoDB Atlas</p>
+          </div>
+        </div>
+        <button id="close-journal-modal" class="p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+      </div>
+
+      <!-- Add New Mood Log Form -->
+      <form id="mood-journal-form" class="mb-5 p-4 rounded-2xl bg-white/5 border border-white/10 shrink-0">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-xs font-semibold text-slate-300 flex items-center gap-1.5">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-purple-400"></i> Current Mood:
+            <span id="journal-current-mood-tag" class="text-purple-300 font-bold">Radiant</span>
+          </span>
+          <span id="journal-current-city-tag" class="text-xs text-slate-400">San Francisco</span>
+        </div>
+        <textarea 
+          id="journal-note-input"
+          rows="2"
+          placeholder="How does today's weather make you feel? (optional reflection)..." 
+          class="w-full p-3 rounded-xl bg-black/30 border border-white/15 focus:border-purple-400 focus:outline-none text-xs text-white placeholder:text-slate-500 resize-none transition-all"
+        ></textarea>
+        <div class="flex justify-end mt-2">
+          <button type="submit" id="save-journal-btn" class="px-4 py-2 rounded-xl bg-purple-600 hover:bg-purple-500 text-white text-xs font-semibold flex items-center gap-1.5 shadow-lg shadow-purple-600/30 transition-all">
+            <i data-lucide="save" class="w-3.5 h-3.5"></i>
+            Save Entry
+          </button>
+        </div>
+      </form>
+
+      <!-- Past Logs List -->
+      <div class="flex-grow overflow-y-auto pr-1">
+        <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3 flex items-center gap-1.5">
+          <i data-lucide="clock" class="w-3.5 h-3.5 text-slate-400"></i> Previous Reflections
+        </h4>
+        <div id="journal-logs-container" class="space-y-2.5">
+          <!-- Populated dynamically -->
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Application Logic Scripts -->
+  <script src="js/moodEngine.js"></script>
+  <script src="js/api.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/app.js"></script>
+</body>
+</html>
+
