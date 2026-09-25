@@ -2,12 +2,14 @@ require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const path = require('path');
+const fs = require('fs');
 const { connectDB, mongoose } = require('./db');
 const Favorite = require('./models/Favorite');
 const MoodLog = require('./models/MoodLog');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
+const distPath = path.join(__dirname, 'dist');
 
 // Connect to MongoDB Atlas
 connectDB();
@@ -16,8 +18,12 @@ connectDB();
 app.use(cors());
 app.use(express.json());
 
-// Serve static frontend assets
-app.use(express.static(path.join(__dirname)));
+// Serve static frontend assets (built React dist or root)
+if (fs.existsSync(distPath)) {
+  app.use(express.static(distPath));
+} else {
+  app.use(express.static(path.join(__dirname)));
+}
 
 // Health check endpoint with database status
 app.get('/api/health', (req, res) => {
@@ -267,7 +273,12 @@ app.get('/api/geocode', async (req, res) => {
 
 // Fallback to index.html for any SPA routes
 app.get('*', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  const distIndex = path.join(distPath, 'index.html');
+  if (fs.existsSync(distIndex)) {
+    res.sendFile(distIndex);
+  } else {
+    res.sendFile(path.join(__dirname, 'index.html'));
+  }
 });
 
 // Start server

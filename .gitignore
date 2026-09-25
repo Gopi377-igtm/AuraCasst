@@ -1,6 +1,9 @@
 # Dependencies
 node_modules/
 
+# Production Build
+dist/
+
 # Environment Variables (Keep sensitive keys safe)
 .env
 .env.local
