@@ -107,7 +107,7 @@ export default function WeatherCanvas({ particleType = 'sunbeams' }) {
               speedX: (Math.random() - 0.5) * 0.6,
               speedY: (Math.random() - 0.5) * 0.6,
               opacity: Math.random() * 0.25 + 0.1,
-              color: ['#38bdf8', '#2dd4bf', '#818cf8'][Math.floor(Math.random() * 3)]
+              color: ['#ef4444', '#f87171', '#dc2626'][Math.floor(Math.random() * 3)]
             });
           }
           break;
@@ -124,7 +124,7 @@ export default function WeatherCanvas({ particleType = 'sunbeams' }) {
       ctx.clearRect(0, 0, width, height);
 
       if (particleType === 'rain') {
-        ctx.strokeStyle = '#93c5fd';
+        ctx.strokeStyle = '#ef4444';
         ctx.lineWidth = 1.5;
         particles.forEach((p) => {
           ctx.globalAlpha = p.opacity;

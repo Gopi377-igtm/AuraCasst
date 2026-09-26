@@ -28,7 +28,7 @@ export default function Header({
     <header className="flex flex-col md:flex-row items-center justify-between gap-4 pb-8 border-b border-white/10">
       {/* Brand Logo & Title */}
       <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/30 ring-1 ring-white/30">
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-red-600 via-rose-600 to-red-500 flex items-center justify-center shadow-lg shadow-red-500/30 ring-1 ring-white/30">
           <Sparkles className="w-6 h-6 text-white animate-pulse" />
         </div>
         <div>
@@ -36,7 +36,7 @@ export default function Header({
             <h1 className="text-2xl font-extrabold tracking-tight font-display bg-gradient-to-r from-white via-slate-100 to-slate-400 bg-clip-text text-transparent">
               AuraCast
             </h1>
-            <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-full bg-white/10 border border-white/10 text-amber-300">
+            <span className="px-2 py-0.5 text-[10px] uppercase font-bold tracking-wider rounded-full bg-white/10 border border-white/10 text-red-300">
               React 18
             </span>
           </div>
@@ -149,9 +149,9 @@ export default function Header({
           <button
             onClick={onOpenAuth}
             title="Sign In / Register Account"
-            className="p-2.5 px-3.5 rounded-2xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center gap-1.5"
+            className="p-2.5 px-3.5 rounded-2xl bg-gradient-to-r from-red-600 to-rose-600 hover:from-red-500 hover:to-rose-500 text-white font-bold text-xs uppercase tracking-wider shadow-lg shadow-red-500/25 transition-all flex items-center gap-1.5"
           >
-            <LogIn className="w-4 h-4 text-slate-950" />
+            <LogIn className="w-4 h-4 text-white" />
             <span>Sign In</span>
           </button>
         )}

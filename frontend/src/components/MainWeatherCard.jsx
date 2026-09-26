@@ -42,7 +42,7 @@ export default function MainWeatherCard({
       <div className="flex items-start justify-between gap-4 mb-6">
         <div>
           <div className="flex items-center gap-2">
-            <MapPin className="w-5 h-5 text-sky-400" />
+            <MapPin className="w-5 h-5 text-red-400" />
             <h2 className="text-2xl sm:text-3xl font-bold text-white font-display">
               {location?.name || 'Current Location'}
             </h2>

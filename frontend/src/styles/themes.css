@@ -1,109 +1,109 @@
-/* AuraCast Dynamic Mood Themes & Gradient Palettes */
+/* AuraCast Dynamic Mood Themes & Gradient Palettes - Red Accent & Black Edges System */
 
 :root {
   --font-primary: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
   --font-display: 'Outfit', system-ui, -apple-system, sans-serif;
   
-  /* Default Radiant Aura (Warm / Sunny) */
-  --aura-gradient: radial-gradient(circle at 20% 20%, rgba(251, 146, 60, 0.4) 0%, transparent 50%),
-                   radial-gradient(circle at 80% 80%, rgba(234, 88, 12, 0.35) 0%, transparent 50%),
-                   radial-gradient(circle at 50% 50%, rgba(245, 158, 11, 0.25) 0%, transparent 70%),
-                   linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
-  --aura-primary: #f97316;
-  --aura-secondary: #eab308;
-  --aura-accent: #f43f5e;
-  --aura-glow: rgba(249, 115, 22, 0.3);
-  --card-bg: rgba(15, 23, 42, 0.65);
-  --card-border: rgba(251, 146, 60, 0.2);
-  --card-hover-border: rgba(251, 146, 60, 0.45);
+  /* Default Aura: Vibrant Crimson Red Glow with Solid Black Edges */
+  --aura-gradient: radial-gradient(circle at 25% 25%, rgba(239, 68, 68, 0.45) 0%, transparent 55%),
+                   radial-gradient(circle at 75% 75%, rgba(220, 38, 38, 0.4) 0%, transparent 50%),
+                   radial-gradient(circle at 50% 50%, rgba(185, 28, 28, 0.3) 0%, transparent 65%),
+                   linear-gradient(140deg, #180507 0%, #0d0204 45%, #000000 100%);
+  --aura-primary: #ef4444;
+  --aura-secondary: #f87171;
+  --aura-accent: #dc2626;
+  --aura-glow: rgba(239, 68, 68, 0.4);
+  --card-bg: rgba(20, 6, 10, 0.72);
+  --card-border: rgba(239, 68, 68, 0.25);
+  --card-hover-border: rgba(239, 68, 68, 0.55);
 }
 
-/* Theme: Radiant (Sunny / Warm / Clear) */
+/* Theme: Radiant (Solar Crimson & Warm Red Glow with Black Edges) */
 body[data-mood="radiant"] {
-  --aura-gradient: radial-gradient(circle at 20% 25%, rgba(251, 146, 60, 0.45) 0%, transparent 55%),
-                   radial-gradient(circle at 80% 75%, rgba(245, 158, 11, 0.4) 0%, transparent 50%),
-                   radial-gradient(circle at 50% 10%, rgba(239, 68, 68, 0.3) 0%, transparent 60%),
-                   linear-gradient(140deg, #180d05 0%, #1a102f 50%, #0c0a1d 100%);
-  --aura-primary: #fb923c;
-  --aura-secondary: #facc15;
-  --aura-accent: #f87171;
-  --aura-glow: rgba(251, 146, 60, 0.35);
-  --card-bg: rgba(28, 18, 14, 0.65);
-  --card-border: rgba(251, 146, 60, 0.25);
-  --card-hover-border: rgba(251, 146, 60, 0.55);
+  --aura-gradient: radial-gradient(circle at 20% 25%, rgba(239, 68, 68, 0.48) 0%, transparent 55%),
+                   radial-gradient(circle at 80% 75%, rgba(244, 63, 94, 0.42) 0%, transparent 50%),
+                   radial-gradient(circle at 50% 10%, rgba(220, 38, 38, 0.35) 0%, transparent 60%),
+                   linear-gradient(140deg, #1c050a 0%, #100205 45%, #000000 100%);
+  --aura-primary: #ef4444;
+  --aura-secondary: #f87171;
+  --aura-accent: #dc2626;
+  --aura-glow: rgba(239, 68, 68, 0.45);
+  --card-bg: rgba(22, 6, 9, 0.75);
+  --card-border: rgba(239, 68, 68, 0.28);
+  --card-hover-border: rgba(239, 68, 68, 0.6);
 }
 
-/* Theme: Serene (Partly Cloudy / Mild / Breezy) */
+/* Theme: Serene (Previously Sky Blue -> Now Crimson Rose & Black Edges) */
 body[data-mood="serene"] {
-  --aura-gradient: radial-gradient(circle at 25% 20%, rgba(56, 189, 248, 0.4) 0%, transparent 50%),
-                   radial-gradient(circle at 75% 80%, rgba(45, 212, 191, 0.35) 0%, transparent 55%),
-                   radial-gradient(circle at 50% 50%, rgba(129, 140, 248, 0.25) 0%, transparent 60%),
-                   linear-gradient(140deg, #071927 0%, #0c2135 50%, #09131e 100%);
-  --aura-primary: #38bdf8;
-  --aura-secondary: #2dd4bf;
-  --aura-accent: #818cf8;
-  --aura-glow: rgba(56, 189, 248, 0.35);
-  --card-bg: rgba(12, 33, 53, 0.65);
-  --card-border: rgba(56, 189, 248, 0.22);
-  --card-hover-border: rgba(56, 189, 248, 0.5);
+  --aura-gradient: radial-gradient(circle at 25% 20%, rgba(244, 63, 94, 0.45) 0%, transparent 50%),
+                   radial-gradient(circle at 75% 80%, rgba(225, 29, 72, 0.4) 0%, transparent 55%),
+                   radial-gradient(circle at 50% 50%, rgba(190, 18, 60, 0.3) 0%, transparent 60%),
+                   linear-gradient(140deg, #19050c 0%, #0e0206 50%, #000000 100%);
+  --aura-primary: #f43f5e;
+  --aura-secondary: #fb7185;
+  --aura-accent: #e11d48;
+  --aura-glow: rgba(244, 63, 94, 0.4);
+  --card-bg: rgba(20, 5, 10, 0.75);
+  --card-border: rgba(244, 63, 94, 0.26);
+  --card-hover-border: rgba(244, 63, 94, 0.55);
 }
 
-/* Theme: Cozy (Rain / Drizzle / Shower) */
+/* Theme: Cozy (Previously Indigo/Blue -> Now Deep Ruby Red & Black Edges) */
 body[data-mood="cozy"] {
-  --aura-gradient: radial-gradient(circle at 20% 30%, rgba(99, 102, 241, 0.45) 0%, transparent 55%),
-                   radial-gradient(circle at 80% 70%, rgba(14, 165, 233, 0.35) 0%, transparent 50%),
-                   radial-gradient(circle at 50% 90%, rgba(168, 85, 247, 0.25) 0%, transparent 60%),
-                   linear-gradient(140deg, #0d1124 0%, #111836 50%, #0a0d1a 100%);
-  --aura-primary: #818cf8;
-  --aura-secondary: #38bdf8;
-  --aura-accent: #c084fc;
-  --aura-glow: rgba(129, 140, 248, 0.35);
-  --card-bg: rgba(17, 24, 54, 0.65);
-  --card-border: rgba(129, 140, 248, 0.25);
-  --card-hover-border: rgba(129, 140, 248, 0.55);
+  --aura-gradient: radial-gradient(circle at 20% 30%, rgba(220, 38, 38, 0.45) 0%, transparent 55%),
+                   radial-gradient(circle at 80% 70%, rgba(185, 28, 28, 0.4) 0%, transparent 50%),
+                   radial-gradient(circle at 50% 90%, rgba(239, 68, 68, 0.3) 0%, transparent 60%),
+                   linear-gradient(140deg, #170407 0%, #0d0204 50%, #000000 100%);
+  --aura-primary: #ef4444;
+  --aura-secondary: #f87171;
+  --aura-accent: #b91c1c;
+  --aura-glow: rgba(220, 38, 38, 0.4);
+  --card-bg: rgba(18, 4, 7, 0.75);
+  --card-border: rgba(239, 68, 68, 0.26);
+  --card-hover-border: rgba(239, 68, 68, 0.55);
 }
 
-/* Theme: Gloomy (Overcast / Fog / Mist / Haze) */
+/* Theme: Gloomy (Overcast / Ash Charcoal with Deep Solid Black Edges) */
 body[data-mood="gloomy"] {
-  --aura-gradient: radial-gradient(circle at 30% 20%, rgba(148, 163, 184, 0.35) 0%, transparent 50%),
-                   radial-gradient(circle at 70% 80%, rgba(100, 116, 139, 0.35) 0%, transparent 50%),
-                   radial-gradient(circle at 50% 50%, rgba(71, 85, 105, 0.3) 0%, transparent 60%),
-                   linear-gradient(140deg, #0b0f19 0%, #131b2e 50%, #090c14 100%);
-  --aura-primary: #94a3b8;
-  --aura-secondary: #cbd5e1;
-  --aura-accent: #64748b;
-  --aura-glow: rgba(148, 163, 184, 0.25);
-  --card-bg: rgba(19, 27, 46, 0.65);
-  --card-border: rgba(148, 163, 184, 0.2);
-  --card-hover-border: rgba(148, 163, 184, 0.45);
+  --aura-gradient: radial-gradient(circle at 30% 20%, rgba(185, 28, 28, 0.3) 0%, transparent 50%),
+                   radial-gradient(circle at 70% 80%, rgba(127, 29, 29, 0.3) 0%, transparent 50%),
+                   radial-gradient(circle at 50% 50%, rgba(153, 27, 27, 0.25) 0%, transparent 60%),
+                   linear-gradient(140deg, #100507 0%, #080203 50%, #000000 100%);
+  --aura-primary: #f87171;
+  --aura-secondary: #ef4444;
+  --aura-accent: #991b1b;
+  --aura-glow: rgba(239, 68, 68, 0.3);
+  --card-bg: rgba(16, 5, 7, 0.75);
+  --card-border: rgba(239, 68, 68, 0.2);
+  --card-hover-border: rgba(239, 68, 68, 0.45);
 }
 
-/* Theme: Stormy (Thunderstorm / Gale / Squall) */
+/* Theme: Stormy (High Voltage Crimson Violet & Electric Red with Black Edges) */
 body[data-mood="stormy"] {
-  --aura-gradient: radial-gradient(circle at 15% 15%, rgba(168, 85, 247, 0.45) 0%, transparent 50%),
-                   radial-gradient(circle at 85% 85%, rgba(236, 72, 153, 0.35) 0%, transparent 55%),
-                   radial-gradient(circle at 50% 40%, rgba(59, 130, 246, 0.35) 0%, transparent 60%),
-                   linear-gradient(140deg, #0d071d 0%, #170e30 50%, #080312 100%);
-  --aura-primary: #c084fc;
-  --aura-secondary: #f472b6;
-  --aura-accent: #60a5fa;
-  --aura-glow: rgba(192, 132, 252, 0.4);
-  --card-bg: rgba(23, 14, 48, 0.7);
-  --card-border: rgba(192, 132, 252, 0.25);
-  --card-hover-border: rgba(192, 132, 252, 0.6);
+  --aura-gradient: radial-gradient(circle at 15% 15%, rgba(225, 29, 72, 0.45) 0%, transparent 50%),
+                   radial-gradient(circle at 85% 85%, rgba(244, 63, 94, 0.4) 0%, transparent 55%),
+                   radial-gradient(circle at 50% 40%, rgba(239, 68, 68, 0.35) 0%, transparent 60%),
+                   linear-gradient(140deg, #1a040b 0%, #0e0206 50%, #000000 100%);
+  --aura-primary: #f43f5e;
+  --aura-secondary: #fb7185;
+  --aura-accent: #ef4444;
+  --aura-glow: rgba(244, 63, 94, 0.45);
+  --card-bg: rgba(19, 5, 10, 0.78);
+  --card-border: rgba(244, 63, 94, 0.28);
+  --card-hover-border: rgba(244, 63, 94, 0.6);
 }
 
-/* Theme: Tranquil (Snow / Ice / Crisp Freezing) */
+/* Theme: Tranquil (Previously Ice Blue -> Now Frost Crimson with Black Edges) */
 body[data-mood="tranquil"] {
-  --aura-gradient: radial-gradient(circle at 20% 25%, rgba(186, 230, 253, 0.45) 0%, transparent 55%),
-                   radial-gradient(circle at 80% 75%, rgba(224, 231, 255, 0.4) 0%, transparent 50%),
-                   radial-gradient(circle at 50% 50%, rgba(147, 197, 253, 0.3) 0%, transparent 60%),
-                   linear-gradient(140deg, #081a2e 0%, #0e2744 50%, #06111f 100%);
-  --aura-primary: #7dd3fc;
-  --aura-secondary: #e0e7ff;
-  --aura-accent: #a5f3fc;
-  --aura-glow: rgba(125, 211, 252, 0.4);
-  --card-bg: rgba(14, 39, 68, 0.65);
-  --card-border: rgba(125, 211, 252, 0.25);
-  --card-hover-border: rgba(125, 211, 252, 0.55);
+  --aura-gradient: radial-gradient(circle at 20% 25%, rgba(254, 205, 211, 0.4) 0%, transparent 55%),
+                   radial-gradient(circle at 80% 75%, rgba(251, 113, 133, 0.4) 0%, transparent 50%),
+                   radial-gradient(circle at 50% 50%, rgba(244, 63, 94, 0.3) 0%, transparent 60%),
+                   linear-gradient(140deg, #180509 0%, #0e0205 50%, #000000 100%);
+  --aura-primary: #fb7185;
+  --aura-secondary: #fecdd3;
+  --aura-accent: #f43f5e;
+  --aura-glow: rgba(251, 113, 133, 0.4);
+  --card-bg: rgba(20, 5, 9, 0.75);
+  --card-border: rgba(251, 113, 133, 0.25);
+  --card-hover-border: rgba(251, 113, 133, 0.55);
 }

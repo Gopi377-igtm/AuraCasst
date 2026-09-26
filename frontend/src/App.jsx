@@ -343,6 +343,9 @@ export default function App() {
       {/* Dynamic Atmospheric Particle Canvas */}
       <WeatherCanvas particleType={mood?.particleType || 'sunbeams'} />
 
+      {/* Solid Black Edges Vignette */}
+      <div className="background-vignette" />
+
       {/* Main Content Wrapper */}
       <div className="relative z-10 flex-grow flex flex-col max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
         {/* Navigation, Auth & Controls Header */}

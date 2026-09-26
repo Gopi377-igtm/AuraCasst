@@ -9,7 +9,7 @@ export default function AtmosphericMetrics({ current, daily }) {
       label: 'Humidity',
       value: `${Math.round(current?.humidity || 0)}%`,
       icon: Droplets,
-      color: 'text-sky-400'
+      color: 'text-red-400'
     },
     {
       label: 'Wind Speed',
@@ -27,7 +27,7 @@ export default function AtmosphericMetrics({ current, daily }) {
       label: 'Pressure',
       value: `${Math.round(current?.pressureHpa || 0)} hPa`,
       icon: Gauge,
-      color: 'text-indigo-400'
+      color: 'text-rose-400'
     },
     {
       label: 'Cloud Cover',

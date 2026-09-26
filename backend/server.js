@@ -1,9 +1,13 @@
 const path = require('path');
 const fs = require('fs');
 
-// Load .env from root or local
-require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
-require('dotenv').config();
+// Load .env from root or local directory
+const rootEnv = path.join(__dirname, '..', '.env');
+if (fs.existsSync(rootEnv)) {
+  require('dotenv').config({ path: rootEnv });
+} else {
+  require('dotenv').config();
+}
 
 const express = require('express');
 const cors = require('cors');
@@ -477,7 +481,18 @@ app.get('*', (req, res) => {
 });
 
 // Start server
-app.listen(PORT, () => {
+const server = app.listen(PORT, () => {
   console.log(`✨ AuraCast server running at http://localhost:${PORT}`);
   console.log(`📡 Healthcheck available at http://localhost:${PORT}/api/health`);
+});
+
+server.on('error', (err) => {
+  if (err.code === 'EADDRINUSE') {
+    console.error(`\n❌ Error: Port ${PORT} is already in use by another running process.`);
+    console.error(`👉 AuraCast is already active on http://localhost:${PORT}, or another application is using port ${PORT}.`);
+    console.error(`👉 To stop conflicting processes, run: Stop-Process -Id (Get-NetTCPConnection -LocalPort ${PORT}).OwningProcess -Force\n`);
+  } else {
+    console.error('❌ Server error:', err.message);
+  }
+  process.exit(1);
 });

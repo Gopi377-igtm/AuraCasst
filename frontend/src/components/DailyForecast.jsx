@@ -16,7 +16,7 @@ export default function DailyForecast({ daily, unit = 'C' }) {
     <div className="glass-card rounded-3xl p-6">
       <div className="flex items-center justify-between gap-2 mb-4">
         <div className="flex items-center gap-2">
-          <CalendarDays className="w-5 h-5 text-sky-400" />
+          <CalendarDays className="w-5 h-5 text-red-400" />
           <h3 className="text-sm font-bold uppercase tracking-wider text-slate-200">
             5-Day Mood Outlook
           </h3>
@@ -56,7 +56,7 @@ export default function DailyForecast({ daily, unit = 'C' }) {
                 </div>
 
                 <div className="flex items-center gap-3">
-                  <WeatherIcon name={dayInfo.icon} className="w-6 h-6 text-sky-300" />
+                  <WeatherIcon name={dayInfo.icon} className="w-6 h-6 text-red-400" />
                   <span className="text-xs text-slate-300 hidden sm:inline-block w-28 truncate">
                     {dayInfo.text}
                   </span>

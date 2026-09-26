@@ -65,7 +65,7 @@ export default function MoodAnalysisCard({ mood, onOpenJournal }) {
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-4">
         <div className="p-3 rounded-xl bg-white/5 border border-white/10">
           <p className="text-[10px] text-slate-400 uppercase font-semibold flex items-center gap-1">
-            <Music className="w-3 h-3 text-sky-400" /> Soundscape
+            <Music className="w-3 h-3 text-red-400" /> Soundscape
           </p>
           <p className="text-xs font-bold text-white mt-1 truncate">
             {mood.soundtrack}

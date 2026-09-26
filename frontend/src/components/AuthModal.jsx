@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, Lock, Mail, User as UserIcon, Loader2, Sparkles, AlertCircle } from 'lucide-react';
+import { X, Loader2, AlertCircle } from 'lucide-react';
 
 export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   const [isLogin, setIsLogin] = useState(true);
@@ -44,7 +44,8 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
     }
   };
 
-  const handleToggleMode = () => {
+  const handleToggleMode = (e) => {
+    if (e) e.preventDefault();
     setIsLogin(!isLogin);
     setError('');
   };
@@ -52,135 +53,114 @@ export default function AuthModal({ isOpen, onClose, onAuthSuccess }) {
   return (
     <div
       onClick={onClose}
-      className="fixed inset-0 z-50 bg-black/70 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
+      className="fixed inset-0 z-50 bg-black/80 backdrop-blur-md flex items-center justify-center p-4 animate-in fade-in duration-200"
     >
       <div
         onClick={(e) => e.stopPropagation()}
-        className="glass-card w-full max-w-md rounded-3xl p-6 sm:p-8 border border-white/20 shadow-2xl relative"
+        className="space-auth-modal relative"
       >
         {/* Close Button */}
         <button
           onClick={onClose}
-          className="absolute top-5 right-5 p-2 rounded-xl bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all"
+          type="button"
+          title="Close"
+          className="absolute top-4 right-4 z-20 p-2 rounded-lg bg-white/10 hover:bg-white/20 text-white/80 hover:text-white transition-all border border-white/20"
         >
-          <X className="w-5 h-5" />
+          <X className="w-4 h-4" />
         </button>
 
-        {/* Modal Header */}
-        <div className="flex items-center gap-3 mb-6">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/30">
-            <Sparkles className="w-5 h-5 text-white" />
-          </div>
-          <div>
-            <h3 className="text-xl font-bold text-white font-display">
-              {isLogin ? 'Welcome Back' : 'Create Account'}
-            </h3>
-            <p className="text-xs text-slate-400">
-              {isLogin
-                ? 'Sign in to access your personal aura weather logs'
-                : 'Join AuraCast to sync favorites & mood reflections'}
-            </p>
-          </div>
-        </div>
+        {/* Shooting Stars Cosmic Background Layer */}
+        <section className="space-bg-stars" aria-hidden="true">
+          <span className="space-star" />
+          <span className="space-star" />
+          <span className="space-star" />
+          <span className="space-star" />
+        </section>
 
-        {/* Error Alert */}
-        {error && (
-          <div className="mb-4 p-3 rounded-2xl bg-rose-500/15 border border-rose-500/30 text-rose-300 text-xs flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 shrink-0 text-rose-400" />
-            <span>{error}</span>
+        {/* Form Content */}
+        <form onSubmit={handleSubmit} className="relative z-10">
+          {/* Header Title with Flickering Neon & Outlined Subtitle */}
+          <div className="space-auth-title">
+            <span>{isLogin ? 'sign in to your' : 'create your'}</span>
           </div>
-        )}
+          <div className="space-auth-subhead">
+            <span>AURACAST</span>
+          </div>
 
-        {/* Auth Form */}
-        <form onSubmit={handleSubmit} className="space-y-4">
-          {!isLogin && (
-            <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-                Full Name
-              </label>
-              <div className="relative flex items-center">
-                <div className="absolute left-3.5 text-slate-400">
-                  <UserIcon className="w-4 h-4" />
-                </div>
-                <input
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  placeholder="e.g. Alex Rivera"
-                  className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/30 border border-white/15 focus:border-amber-400 focus:outline-none text-xs sm:text-sm text-white placeholder:text-slate-500 transition-all"
-                  required={!isLogin}
-                />
-              </div>
+          {/* Error Alert */}
+          {error && (
+            <div className="mb-3 p-2.5 rounded-lg bg-red-950/80 border border-red-500/50 text-red-200 text-xs font-mono flex items-center gap-2">
+              <AlertCircle className="w-4 h-4 shrink-0 text-red-400" />
+              <span>{error}</span>
             </div>
           )}
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-              Email Address
-            </label>
-            <div className="relative flex items-center">
-              <div className="absolute left-3.5 text-slate-400">
-                <Mail className="w-4 h-4" />
-              </div>
+          {/* Full Name field in Registration mode */}
+          {!isLogin && (
+            <div className="space-input-container">
               <input
-                type="email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                placeholder="you@domain.com"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/30 border border-white/15 focus:border-amber-400 focus:outline-none text-xs sm:text-sm text-white placeholder:text-slate-500 transition-all"
-                required
+                type="text"
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                placeholder="Full Name"
+                className="input-name"
+                required={!isLogin}
               />
             </div>
+          )}
+
+          {/* Email input */}
+          <div className="space-input-container">
+            <input
+              type="email"
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+              placeholder="Email"
+              className="input-mail"
+              required
+            />
           </div>
 
-          <div>
-            <label className="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">
-              Password
-            </label>
-            <div className="relative flex items-center">
-              <div className="absolute left-3.5 text-slate-400">
-                <Lock className="w-4 h-4" />
-              </div>
-              <input
-                type="password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                placeholder="••••••••"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl bg-black/30 border border-white/15 focus:border-amber-400 focus:outline-none text-xs sm:text-sm text-white placeholder:text-slate-500 transition-all"
-                required
-              />
-            </div>
+          {/* Password input */}
+          <div className="space-input-container">
+            <input
+              type="password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              placeholder="Password"
+              className="input-pwd"
+              required
+            />
           </div>
 
+          {/* Submit button with Light Sweep Shimmer animation */}
           <button
             type="submit"
             disabled={isLoading}
-            className="w-full mt-2 py-3 px-4 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-400 hover:to-orange-400 text-slate-950 font-bold text-xs uppercase tracking-wider shadow-lg shadow-orange-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50"
+            className="space-submit-btn"
           >
             {isLoading ? (
               <>
-                <Loader2 className="w-4 h-4 animate-spin" />
-                <span>{isLogin ? 'Authenticating...' : 'Creating Account...'}</span>
+                <Loader2 className="w-4 h-4 animate-spin text-white" />
+                <span className="sign-text">Authenticating...</span>
               </>
             ) : (
-              <span>{isLogin ? 'Sign In' : 'Create Free Account'}</span>
+              <span className="sign-text">{isLogin ? 'Sign in' : 'Create Account'}</span>
             )}
           </button>
-        </form>
 
-        {/* Toggle between Login and Register */}
-        <div className="mt-6 pt-4 border-t border-white/10 text-center">
-          <p className="text-xs text-slate-400">
-            {isLogin ? "Don't have an account yet?" : 'Already have an account?'}
+          {/* Signup / Sign in Toggle Link */}
+          <p className="space-signup-link">
+            {isLogin ? 'No account?' : 'Already registered?'}
             <button
               type="button"
               onClick={handleToggleMode}
-              className="ml-2 font-semibold text-amber-400 hover:text-amber-300 transition-colors underline underline-offset-2"
+              className="up"
             >
-              {isLogin ? 'Sign Up' : 'Log In'}
+              {isLogin ? 'Sign up!' : 'Sign in!'}
             </button>
           </p>
-        </div>
+        </form>
       </div>
     </div>
   );

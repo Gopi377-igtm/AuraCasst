@@ -24,8 +24,8 @@ export const MOODS = {
     vibe: 'Calm, Balanced & Mindful',
     description: 'Soft diffused daylight and gentle atmospheric pressure nurture deep clarity and inner peace.',
     activity: 'Ideal for deep work, mindful meditation, stretching, or sipping green tea.',
-    auraEffect: 'Azure Pastel Shimmer',
-    palette: ['#38bdf8', '#2dd4bf', '#818cf8', '#0284c7'],
+    auraEffect: 'Crimson Rose Shimmer',
+    palette: ['#ef4444', '#f87171', '#dc2626', '#b91c1c'],
     particleType: 'floating_orbs',
     soundtrack: 'Soft Wind Chimes & Gentle Breeze',
     musicSuggestion: 'Ambient Chillout / Neo-Classical Piano'
@@ -37,8 +37,8 @@ export const MOODS = {
     vibe: 'Introspective, Nostalgic & Comforting',
     description: 'Rhythmic petrichor and falling raindrops create a natural acoustic cocoon for deep comfort.',
     activity: 'Curl up with a good book, brew hot coffee, listen to acoustic tunes, or journal.',
-    auraEffect: 'Indigo Petrichor Pulse',
-    palette: ['#818cf8', '#38bdf8', '#c084fc', '#4f46e5'],
+    auraEffect: 'Ruby Petrichor Pulse',
+    palette: ['#ef4444', '#f43f5e', '#e11d48', '#991b1b'],
     particleType: 'rain',
     soundtrack: 'Gentle Rain on Window & Lo-Fi Beats',
     musicSuggestion: 'Lo-Fi Chill Beats / Cozy Acoustic Jazz'
@@ -51,7 +51,7 @@ export const MOODS = {
     description: 'Muted skies and diffused monochromatic lighting evoke calm introspection and tranquil solitude.',
     activity: 'Dim ambient lights, organize thoughts, sketch, or enjoy a warm bowl of soup.',
     auraEffect: 'Misty Slate Drift',
-    palette: ['#94a3b8', '#cbd5e1', '#64748b', '#475569'],
+    palette: ['#f87171', '#ef4444', '#991b1b', '#7f1d1d'],
     particleType: 'mist',
     soundtrack: 'Ambient Drone & Soft Fog Whispers',
     musicSuggestion: 'Deep Drone / Ambient Electronic Soundscapes'
@@ -63,8 +63,8 @@ export const MOODS = {
     vibe: 'Intense, Dramatic & Charged',
     description: 'High electrostatic energy and booming skies stir adrenaline, awakening bold focus.',
     activity: 'Stay safely sheltered, tackle ambitious creative challenges, or listen to cinematic audio.',
-    auraEffect: 'Electric Violet Spark',
-    palette: ['#c084fc', '#f472b6', '#60a5fa', '#7e22ce'],
+    auraEffect: 'Electric Crimson Spark',
+    palette: ['#f43f5e', '#fb7185', '#ef4444', '#7f1d1d'],
     particleType: 'storm',
     soundtrack: 'Rolling Thunder & Distant Lightning',
     musicSuggestion: 'Cinematic Orchestral / Electronic Synthwave'
@@ -76,8 +76,8 @@ export const MOODS = {
     vibe: 'Crisp, Pure & Still',
     description: 'Soft crystal precipitation muffles external noise, bestowing profound stillness.',
     activity: 'Wrap in a warm knit blanket, enjoy rich hot cocoa, or watch snow drift gently.',
-    auraEffect: 'Icy Diamond Glow',
-    palette: ['#7dd3fc', '#e0e7ff', '#a5f3fc', '#0284c7'],
+    auraEffect: 'Frost Crimson Glow',
+    palette: ['#f87171', '#ef4444', '#fca5a5', '#dc2626'],
     particleType: 'snow',
     soundtrack: 'Subtle Hearth Fire & Whispering Wind',
     musicSuggestion: 'Warm Acoustic Folk / Ambient Strings'
