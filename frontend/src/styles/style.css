@@ -27,9 +27,30 @@ body {
   position: fixed;
   inset: 0;
   pointer-events: none;
-  z-index: 1;
+  z-index: 2;
   background: radial-gradient(ellipse at 50% 50%, transparent 35%, rgba(0, 0, 0, 0.75) 70%, #000000 100%);
   box-shadow: inset 0 0 160px 80px #000000;
+}
+
+/* Procedural Cracked Earth Background Layer */
+.cracked-earth {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  background-color: #191919;
+  filter: url(#cracks);
+  pointer-events: none;
+  z-index: 0;
+  opacity: 0.75;
+}
+
+.cracks-svg-filter {
+  position: absolute;
+  width: 0;
+  height: 0;
+  pointer-events: none;
+  opacity: 0;
 }
 
 h1, h2, h3, .font-display {
