@@ -12,12 +12,15 @@ import MoodJournalModal from './components/MoodJournalModal';
 import AuthModal from './components/AuthModal';
 import Footer from './components/Footer';
 import WeatherCanvas from './components/WeatherCanvas';
+import FoodSuggestions from './components/FoodSuggestions';
+import WelcomePage from './components/WelcomePage';
 import { MOODS, evaluateMood } from './services/moodEngine';
 import { WeatherAPI } from './services/weatherApi';
 import { DatabaseAPI } from './services/databaseApi';
 import { audioSynth } from './services/audioSynth';
 
 export default function App() {
+  const [showWelcome, setShowWelcome] = useState(true);
   const [location, setLocation] = useState({
     name: 'San Francisco',
     country: 'United States',
@@ -371,78 +374,99 @@ export default function App() {
       {/* Solid Black Edges Vignette */}
       <div className="background-vignette" />
 
-      {/* Main Content Wrapper */}
-      <div className="relative z-10 flex-grow flex flex-col max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10">
-        {/* Navigation, Auth & Controls Header */}
-        <Header
-          mongoStatus={mongoStatus}
-          isAudioPlaying={isAudioPlaying}
-          onToggleAudio={handleToggleAudio}
+      {/* Welcome Screen or Main Content Dashboard */}
+      {showWelcome ? (
+        <WelcomePage
+          onEnter={() => setShowWelcome(false)}
+          weather={weather}
+          location={location}
+          mood={mood}
           unit={unit}
-          onToggleUnit={handleToggleUnit}
-          favoritesCount={favorites.length}
-          onOpenFavorites={() => setIsFavoritesModalOpen(true)}
-          onOpenJournal={handleOpenJournal}
-          user={user}
-          onOpenAuth={() => setIsAuthModalOpen(true)}
-          onLogout={handleLogout}
-        />
-
-        {/* Search Bar & Auto-suggestions */}
-        <SearchBar
           onSelectLocation={handleSelectLocation}
-          onDetectLocation={handleDetectLocation}
-          recentSearches={recentSearches}
-          isDetectingLocation={isDetectingLocation}
         />
+      ) : (
+        <div className="relative z-10 flex-grow flex flex-col max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 md:py-10 animate-fade-in">
+          {/* Navigation, Auth & Controls Header */}
+          <Header
+            mongoStatus={mongoStatus}
+            isAudioPlaying={isAudioPlaying}
+            onToggleAudio={handleToggleAudio}
+            unit={unit}
+            onToggleUnit={handleToggleUnit}
+            favoritesCount={favorites.length}
+            onOpenFavorites={() => setIsFavoritesModalOpen(true)}
+            onOpenJournal={handleOpenJournal}
+            user={user}
+            onOpenAuth={() => setIsAuthModalOpen(true)}
+            onLogout={handleLogout}
+            onOpenWelcome={() => setShowWelcome(true)}
+          />
 
-        {/* Mood Simulator Bar */}
-        <MoodSimulator
-          activeMood={mood}
-          onSelectMood={handleSelectSimulatorMood}
-        />
+          {/* Search Bar & Auto-suggestions */}
+          <SearchBar
+            onSelectLocation={handleSelectLocation}
+            onDetectLocation={handleDetectLocation}
+            recentSearches={recentSearches}
+            isDetectingLocation={isDetectingLocation}
+          />
 
-        {/* Weather & Mood Visualizer Main Grid */}
-        <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-2 items-start">
-          {/* Left Column: Real-time Weather & Atmospheric Metrics */}
-          <div className="lg:col-span-7 flex flex-col gap-6">
-            <MainWeatherCard
-              location={location}
-              weather={weather}
-              unit={unit}
-              isFavorite={isCurrentFavorite()}
-              onToggleFavorite={handleToggleCurrentFavorite}
-              isLoading={isLoadingWeather}
-            />
+          {/* Mood Simulator Bar */}
+          <MoodSimulator
+            activeMood={mood}
+            onSelectMood={handleSelectSimulatorMood}
+          />
 
-            <AtmosphericMetrics
-              current={weather?.current}
-              daily={weather?.daily}
-            />
+          {/* Weather & Mood Visualizer Main Grid */}
+          <main className="grid grid-cols-1 lg:grid-cols-12 gap-6 mt-2 items-start">
+            {/* Left Column: Real-time Weather & Atmospheric Metrics */}
+            <div className="lg:col-span-7 flex flex-col gap-6">
+              <MainWeatherCard
+                location={location}
+                weather={weather}
+                unit={unit}
+                isFavorite={isCurrentFavorite()}
+                onToggleFavorite={handleToggleCurrentFavorite}
+                isLoading={isLoadingWeather}
+              />
 
-            <HourlyForecast
-              hourly={weather?.hourly}
-              unit={unit}
-            />
-          </div>
+              <AtmosphericMetrics
+                current={weather?.current}
+                daily={weather?.daily}
+              />
 
-          {/* Right Column: Mood Mapping Analysis & Extended Forecast */}
-          <div className="lg:col-span-5 flex flex-col gap-6">
-            <MoodAnalysisCard
-              mood={mood}
-              onOpenJournal={handleOpenJournal}
-            />
+              <HourlyForecast
+                hourly={weather?.hourly}
+                unit={unit}
+              />
+            </div>
 
-            <DailyForecast
-              daily={weather?.daily}
-              unit={unit}
-            />
-          </div>
-        </main>
+            {/* Right Column: Mood Mapping Analysis & Extended Forecast */}
+            <div className="lg:col-span-5 flex flex-col gap-6">
+              <MoodAnalysisCard
+                mood={mood}
+                onOpenJournal={handleOpenJournal}
+              />
 
-        {/* Footer */}
-        <Footer />
-      </div>
+              <DailyForecast
+                daily={weather?.daily}
+                unit={unit}
+              />
+            </div>
+          </main>
+
+          {/* Climate-Driven Food Suggestion Section with Swiggy Direct Redirect */}
+          <FoodSuggestions
+            weather={weather}
+            mood={mood}
+            location={location}
+            unit={unit}
+            onSelectLocation={handleSelectLocation}
+          />
+
+          {/* Footer */}
+          <Footer onOpenWelcome={() => setShowWelcome(true)} />
+        </div>
+      )}
 
       {/* MongoDB Favorites Modal */}
       <FavoritesModal

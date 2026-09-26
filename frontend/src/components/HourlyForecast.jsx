@@ -22,7 +22,7 @@ export default function HourlyForecast({ hourly, unit = 'C' }) {
         <span className="text-[11px] text-slate-400">Next 12 Hours</span>
       </div>
 
-      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-thin">
+      <div className="flex gap-4 overflow-x-auto py-5 px-3 -my-3 -mx-2 scrollbar-thin">
         {hourly && hourly.length > 0 ? (
           hourly.map((item, idx) => {
             const itemDate = new Date(item.time);
@@ -35,19 +35,19 @@ export default function HourlyForecast({ hourly, unit = 'C' }) {
             return (
               <div
                 key={idx}
-                className="flex-shrink-0 flex flex-col items-center justify-between p-3.5 rounded-2xl bg-white/5 border border-white/10 hover:border-white/30 transition-all w-24 text-center"
+                className="hourly-uiverse-card group flex-shrink-0 flex flex-col items-center justify-between p-3.5 rounded-2xl w-24 text-center select-none"
               >
-                <span className="text-xs text-slate-300 font-medium">
+                <span className="text-xs text-slate-300 font-medium z-10 transition-colors group-hover:text-white">
                   {hourFormatted}
                 </span>
-                <div className="my-2">
+                <div className="my-2 z-10 transition-transform duration-300 group-hover:scale-110">
                   <WeatherIcon
                     name={itemInfo.icon}
-                    className="w-6 h-6 text-amber-300 mx-auto"
+                    className="w-6 h-6 text-amber-300 mx-auto drop-shadow-sm"
                   />
                 </div>
-                <span className="text-sm font-bold">{formatTemp(item.tempC)}</span>
-                <span className="text-[10px] text-slate-400 mt-1">
+                <span className="text-sm font-bold text-white z-10">{formatTemp(item.tempC)}</span>
+                <span className="text-[10px] text-slate-400 mt-1 z-10 group-hover:text-slate-300">
                   {item.precipProb}% rain
                 </span>
               </div>

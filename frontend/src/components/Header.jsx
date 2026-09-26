@@ -8,7 +8,8 @@ import {
   Database,
   LogIn,
   LogOut,
-  User as UserIcon
+  User as UserIcon,
+  Utensils
 } from 'lucide-react';
 
 export default function Header({
@@ -22,13 +23,18 @@ export default function Header({
   onOpenJournal,
   user,
   onOpenAuth,
-  onLogout
+  onLogout,
+  onOpenWelcome
 }) {
   return (
     <header className="flex flex-col md:flex-row items-center justify-between gap-4 pb-8 border-b border-white/10">
       {/* Brand Logo & Title */}
-      <div className="flex items-center gap-3">
-        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-red-600 via-rose-600 to-red-500 flex items-center justify-center shadow-lg shadow-red-500/30 ring-1 ring-white/30">
+      <div 
+        onClick={onOpenWelcome}
+        className={`flex items-center gap-3 ${onOpenWelcome ? 'cursor-pointer group' : ''}`}
+        title={onOpenWelcome ? 'Click to open Welcome Screen' : ''}
+      >
+        <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-red-600 via-rose-600 to-red-500 flex items-center justify-center shadow-lg shadow-red-500/30 ring-1 ring-white/30 group-hover:scale-105 transition-transform">
           <Sparkles className="w-6 h-6 text-white animate-pulse" />
         </div>
         <div>
@@ -121,6 +127,28 @@ export default function Header({
           <BookHeart className="w-4 h-4 text-purple-400" />
           <span className="hidden sm:inline">Mood Journal</span>
         </button>
+
+        {/* Climate Food Pairings & Swiggy Shortcut */}
+        <a
+          href="#food-suggestions"
+          title="Atmospheric Food Suggestions & Swiggy Direct Delivery"
+          className="p-2.5 rounded-2xl glass-card bg-orange-500/15 hover:bg-orange-500/25 border-orange-500/30 text-orange-300 hover:text-white transition-all flex items-center gap-2 text-xs font-semibold group"
+        >
+          <Utensils className="w-4 h-4 text-orange-400 group-hover:scale-110 transition-transform" />
+          <span className="hidden sm:inline">Food Pairings</span>
+        </a>
+
+        {/* Welcome Screen Shortcut */}
+        {onOpenWelcome && (
+          <button
+            onClick={onOpenWelcome}
+            title="Return to Welcome Screen"
+            className="p-2.5 rounded-2xl glass-card bg-rose-500/10 hover:bg-rose-500/20 border-rose-500/30 text-rose-300 hover:text-white transition-all flex items-center gap-1.5 text-xs font-semibold"
+          >
+            <Sparkles className="w-4 h-4 text-rose-400" />
+            <span className="hidden lg:inline">Welcome Screen</span>
+          </button>
+        )}
 
         {/* User Account / Auth Controls */}
         {user ? (
