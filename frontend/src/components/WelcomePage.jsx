@@ -46,13 +46,17 @@ export default function WelcomePage({
       : '--';
 
   const wmoCode = weather?.current?.wmoCode ?? 1;
+  const isDefaultCity =
+    !location?.name ||
+    location.name === 'Detecting Location...' ||
+    location.name === 'San Francisco';
   const cityName =
-    location?.name && location.name !== 'Detecting Location...'
+    !isDefaultCity
       ? location.name
       : isDetectingLocation
-      ? 'Detecting Location...'
-      : 'Your Location';
-  const countryName = location?.country || '';
+      ? 'Locating...'
+      : 'Current Location';
+  const countryName = !isDefaultCity ? location?.country || '' : '';
 
   // Interactive sample climates for the welcome screen
   const climateShowcase = {
@@ -178,25 +182,60 @@ export default function WelcomePage({
         </div>
 
         {/* Live Location & Quick Jump Button */}
-        <div className="flex items-center gap-3">
-          {/* Current Live Weather Indicator */}
+        <div className="flex items-center gap-2.5 sm:gap-3">
+          {/* Live Current Location Badge with Auto-Detection */}
           <button
             type="button"
             onClick={onDetectLocation}
-            title={isDetectingLocation ? 'Detecting current location...' : 'Current Location (Click to refresh)'}
-            className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md text-xs text-slate-300 shadow-sm cursor-pointer transition-all active:scale-95"
+            disabled={isDetectingLocation}
+            title={
+              isDetectingLocation
+                ? 'Detecting your current location...'
+                : `Current Location: ${cityName}${countryName ? ', ' + countryName : ''} (${formattedTemp}). Click to re-sync coordinates.`
+            }
+            className="flex items-center gap-2 sm:gap-2.5 px-3 sm:px-4 py-1.5 sm:py-2 rounded-full bg-white/[0.07] hover:bg-white/[0.12] border border-white/15 hover:border-rose-500/40 backdrop-blur-md text-xs text-slate-200 shadow-lg shadow-black/20 cursor-pointer transition-all duration-300 active:scale-95 group"
           >
-            <MapPin className={`w-3.5 h-3.5 text-rose-400 shrink-0 ${isDetectingLocation ? 'animate-bounce text-amber-400' : ''}`} />
-            <span className="font-semibold text-white truncate max-w-[130px]">
-              {cityName}
+            {/* Pulsing Pin / Radar Icon */}
+            <div className="relative flex items-center justify-center shrink-0">
+              <MapPin
+                className={`w-3.5 h-3.5 text-rose-400 transition-transform group-hover:scale-110 ${
+                  isDetectingLocation ? 'animate-bounce text-amber-400' : ''
+                }`}
+              />
+              {isDetectingLocation && (
+                <span className="absolute -inset-1 rounded-full bg-amber-400/30 animate-ping" />
+              )}
+            </div>
+
+            {/* Current Location Label & City */}
+            <div className="flex items-center gap-1.5 font-medium">
+              <span className="text-[10px] sm:text-[11px] font-bold uppercase tracking-wider text-rose-300/90 whitespace-nowrap hidden sm:inline">
+                Current Location:
+              </span>
+              <span className="font-bold text-white truncate max-w-[95px] sm:max-w-[140px] md:max-w-[180px]">
+                {cityName}
+              </span>
+            </div>
+
+            {/* Live Synchronized Temperature */}
+            <span className="text-amber-400 font-mono font-bold text-xs sm:text-sm pl-1 border-l border-white/15 shrink-0">
+              {formattedTemp}
             </span>
-            <span className="text-amber-400 font-mono font-bold">{formattedTemp}</span>
+
+            {/* Live Synced Radar Status Dot */}
             <span
-              className={`w-2 h-2 rounded-full ${
-                isDetectingLocation ? 'bg-amber-400 animate-spin' : 'bg-emerald-400 animate-pulse'
-              } ml-0.5`}
+              className="relative flex h-2 w-2 ml-0.5 shrink-0"
               title={isDetectingLocation ? 'Locating...' : 'Live Synced'}
-            />
+            >
+              {isDetectingLocation ? (
+                <span className="w-2 h-2 rounded-full bg-amber-400 animate-spin" />
+              ) : (
+                <>
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                </>
+              )}
+            </span>
           </button>
 
           {/* Quick Sound preview */}
@@ -448,8 +487,8 @@ export default function WelcomePage({
                 <span>Detecting your local atmosphere in real-time...</span>
               ) : (
                 <span>
-                  Live weather for <span className="text-amber-400 font-semibold">{cityName}</span>
-                  {countryName ? `, ${countryName}` : ''} is ready and synchronized.
+                  Current atmosphere for <span className="text-amber-400 font-semibold">{cityName}</span>
+                  {countryName ? `, ${countryName}` : ''} is live and synchronized.
                 </span>
               )}
             </p>

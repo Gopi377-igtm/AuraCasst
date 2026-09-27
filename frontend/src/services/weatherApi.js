@@ -134,10 +134,60 @@ export const WeatherAPI = {
   },
 
   /**
-   * Fast IP-based Geolocation (requires zero browser permissions, instantaneous)
+   * Fast IP-based Geolocation with multi-provider cascade (zero browser permissions, instantaneous)
    */
   async getIPLocation() {
-    // Strategy 1: ipwho.is (reliable, highly accurate, CORS-friendly)
+    // Strategy 1: BigDataCloud Client Reverse Geocode (free, high-speed, direct client IP)
+    try {
+      const res = await fetch('https://api.bigdatacloud.net/data/reverse-geocode-client?localityLanguage=en');
+      if (res.ok) {
+        const data = await res.json();
+        const city = data.city || data.locality || data.principalSubdivision;
+        if (city && data.latitude && data.longitude) {
+          const country = data.countryName || '';
+          const admin1 = data.principalSubdivision || '';
+          return {
+            name: city,
+            country: country,
+            admin1: admin1,
+            latitude: Number(data.latitude),
+            longitude: Number(data.longitude),
+            displayName: `${city}${admin1 && admin1 !== city ? ', ' + admin1 : ''}${country ? ', ' + country : ''}`,
+            source: 'ip',
+            isCurrentLocation: true
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('BigDataCloud IP lookup error, trying GeoJS:', err);
+    }
+
+    // Strategy 2: GeoJS (free, open CORS, highly reliable, zero rate limit)
+    try {
+      const res = await fetch('https://get.geojs.io/v1/ip/geo.json');
+      if (res.ok) {
+        const data = await res.json();
+        if (data.city && data.latitude && data.longitude) {
+          const city = data.city;
+          const country = data.country || '';
+          const admin1 = data.region || '';
+          return {
+            name: city,
+            country: country,
+            admin1: admin1,
+            latitude: parseFloat(data.latitude),
+            longitude: parseFloat(data.longitude),
+            displayName: `${city}${country ? ', ' + country : ''}`,
+            source: 'ip',
+            isCurrentLocation: true
+          };
+        }
+      }
+    } catch (err) {
+      console.warn('GeoJS IP lookup error, trying ipwho.is:', err);
+    }
+
+    // Strategy 3: ipwho.is (reliable, highly accurate, CORS-friendly)
     try {
       const res = await fetch('https://ipwho.is/', { cache: 'no-cache' });
       if (res.ok) {
@@ -153,7 +203,8 @@ export const WeatherAPI = {
             latitude: Number(data.latitude),
             longitude: Number(data.longitude),
             displayName: `${city}${country ? ', ' + country : ''}`,
-            source: 'ip'
+            source: 'ip',
+            isCurrentLocation: true
           };
         }
       }
@@ -161,7 +212,7 @@ export const WeatherAPI = {
       console.warn('ipwho.is error, trying fallback:', err);
     }
 
-    // Strategy 2: freeipapi.com
+    // Strategy 4: freeipapi.com
     try {
       const res = await fetch('https://freeipapi.com/api/json', { cache: 'no-cache' });
       if (res.ok) {
@@ -177,7 +228,8 @@ export const WeatherAPI = {
             latitude: Number(data.latitude),
             longitude: Number(data.longitude),
             displayName: `${city}${country ? ', ' + country : ''}`,
-            source: 'ip'
+            source: 'ip',
+            isCurrentLocation: true
           };
         }
       }
@@ -191,7 +243,7 @@ export const WeatherAPI = {
   /**
    * Browser Geolocation API promise wrapper
    */
-  getBrowserPosition(options = { timeout: 8000, enableHighAccuracy: true }) {
+  getBrowserPosition(options = { timeout: 6000, enableHighAccuracy: true }) {
     if (typeof navigator === 'undefined' || !navigator.geolocation) {
       return Promise.reject(new Error('Geolocation is not supported by your browser.'));
     }
@@ -210,45 +262,55 @@ export const WeatherAPI = {
    * while simultaneously requesting high-accuracy browser GPS for pinpoint neighborhood precision.
    */
   async detectAccurateLocation(onFastLocationFound) {
-    let resolved = false;
-
-    // Fast IP lookup
+    // Fast IP lookup promise (usually resolves in < 250ms)
     const ipPromise = this.getIPLocation()
       .then((ipLoc) => {
-        if (ipLoc && !resolved && typeof onFastLocationFound === 'function') {
+        if (ipLoc && typeof onFastLocationFound === 'function') {
           onFastLocationFound(ipLoc);
         }
         return ipLoc;
       })
       .catch(() => null);
 
-    // Browser Geolocation lookup
+    // Browser Geolocation lookup with timeout
     const gpsPromise = (async () => {
       try {
-        const coords = await this.getBrowserPosition();
-        resolved = true;
+        const coords = await this.getBrowserPosition({ timeout: 6000, enableHighAccuracy: true });
         const meta = await this.reverseGeocode(coords.latitude, coords.longitude);
-        return {
+        const gpsLoc = {
           name: meta.name || 'Current Location',
           country: meta.country || '',
           admin1: meta.admin1 || '',
           latitude: coords.latitude,
           longitude: coords.longitude,
           displayName: meta.displayName,
-          source: 'gps'
+          source: 'gps',
+          isCurrentLocation: true
         };
+        if (typeof onFastLocationFound === 'function') {
+          onFastLocationFound(gpsLoc);
+        }
+        return gpsLoc;
       } catch (err) {
         return null;
       }
     })();
 
-    // Wait for GPS and IP promises
+    // Race fast IP promise with a 2.5s maximum wait so UI never hangs
+    const fastLoc = await Promise.race([
+      ipPromise,
+      new Promise((res) => setTimeout(() => res(null), 2500))
+    ]);
+
+    if (fastLoc) {
+      // In background, let GPS finish and upgrade coordinates if browser permission is allowed
+      gpsPromise.catch(() => null);
+      return fastLoc;
+    }
+
+    // Fallback: wait for whichever finishes first between GPS and IP
     const [gpsLoc, ipLoc] = await Promise.all([gpsPromise, ipPromise]);
-
-    if (gpsLoc) return gpsLoc;
-    if (ipLoc) return ipLoc;
-
-    return null;
+    return gpsLoc || ipLoc || null;
   },
 
   /**

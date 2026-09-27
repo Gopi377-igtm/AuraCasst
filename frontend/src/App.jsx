@@ -26,7 +26,12 @@ export default function App() {
       const cached = localStorage.getItem('auracast_current_location');
       if (cached) {
         const parsed = JSON.parse(cached);
-        if (parsed?.latitude && parsed?.longitude) {
+        if (
+          parsed?.latitude &&
+          parsed?.longitude &&
+          parsed.name !== 'San Francisco' &&
+          parsed.name !== 'Detecting Location...'
+        ) {
           return parsed;
         }
       }
@@ -38,7 +43,8 @@ export default function App() {
       country: '',
       latitude: null,
       longitude: null,
-      isDetecting: true
+      isDetecting: true,
+      isCurrentLocation: true
     };
   });
   const [weather, setWeather] = useState(null);
@@ -160,26 +166,18 @@ export default function App() {
     const detectInitialLocation = async () => {
       setIsDetectingLocation(true);
       try {
-        // Fast callback to immediately show real IP location without waiting for browser GPS prompt
-        const handleFastLocation = (fastLoc) => {
-          if (!isMounted || !fastLoc) return;
-          setLocation((prev) => {
-            if (prev?.source === 'gps') return prev;
-            return fastLoc;
-          });
-          loadWeather(fastLoc);
+        const handleLocationFound = (foundLoc) => {
+          if (!isMounted || !foundLoc) return;
+          setLocation(foundLoc);
+          loadWeather(foundLoc);
           try {
-            localStorage.setItem('auracast_current_location', JSON.stringify(fastLoc));
+            localStorage.setItem('auracast_current_location', JSON.stringify(foundLoc));
           } catch (e) {}
         };
 
-        const accurateLoc = await WeatherAPI.detectAccurateLocation(handleFastLocation);
+        const accurateLoc = await WeatherAPI.detectAccurateLocation(handleLocationFound);
         if (isMounted && accurateLoc) {
-          setLocation(accurateLoc);
-          loadWeather(accurateLoc);
-          try {
-            localStorage.setItem('auracast_current_location', JSON.stringify(accurateLoc));
-          } catch (e) {}
+          handleLocationFound(accurateLoc);
         }
       } catch (err) {
         console.warn('Initial current location detection error:', err);
@@ -190,8 +188,14 @@ export default function App() {
       }
     };
 
-    // If cached location already exists, load weather for it immediately
-    if (location && location.latitude !== null && location.longitude !== null) {
+    // If cached valid location already exists, load weather for it immediately
+    if (
+      location &&
+      location.latitude !== null &&
+      location.longitude !== null &&
+      location.name !== 'San Francisco' &&
+      location.name !== 'Detecting Location...'
+    ) {
       loadWeather(location);
     }
 
