@@ -96,12 +96,14 @@ export default function SearchBar({
           <button
             type="button"
             onClick={onDetectLocation}
-            title="Use current geolocation"
-            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all mr-2 shrink-0 flex items-center justify-center border border-white/10"
+            disabled={isDetectingLocation}
+            title={isDetectingLocation ? 'Detecting current location...' : 'Detect your current location'}
+            aria-label="Detect current location"
+            className="p-2.5 rounded-full bg-white/10 hover:bg-white/20 text-slate-300 hover:text-white transition-all mr-2 shrink-0 flex items-center justify-center border border-white/10 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Navigation
               className={`w-4 h-4 text-red-400 ${
-                isDetectingLocation ? 'animate-spin' : ''
+                isDetectingLocation ? 'animate-spin text-amber-400' : ''
               }`}
             />
           </button>

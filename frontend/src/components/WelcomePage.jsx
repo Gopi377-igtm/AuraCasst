@@ -26,6 +26,8 @@ export default function WelcomePage({
   location,
   mood,
   unit = 'C',
+  isDetectingLocation = false,
+  onDetectLocation,
   onSelectLocation
 }) {
   const [selectedClimate, setSelectedClimate] = useState('radiant');
@@ -39,10 +41,17 @@ export default function WelcomePage({
       ? unit === 'F'
         ? `${Math.round((currentTemp * 9) / 5 + 32)}°F`
         : `${Math.round(currentTemp)}°C`
-      : '24°C';
+      : isDetectingLocation
+      ? 'Locating...'
+      : '--';
 
   const wmoCode = weather?.current?.wmoCode ?? 1;
-  const cityName = location?.name || 'Your Location';
+  const cityName =
+    location?.name && location.name !== 'Detecting Location...'
+      ? location.name
+      : isDetectingLocation
+      ? 'Detecting Location...'
+      : 'Your Location';
   const countryName = location?.country || '';
 
   // Interactive sample climates for the welcome screen
@@ -171,14 +180,24 @@ export default function WelcomePage({
         {/* Live Location & Quick Jump Button */}
         <div className="flex items-center gap-3">
           {/* Current Live Weather Indicator */}
-          <div className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/5 border border-white/10 backdrop-blur-md text-xs text-slate-300 shadow-sm">
-            <MapPin className="w-3.5 h-3.5 text-rose-400 shrink-0" />
+          <button
+            type="button"
+            onClick={onDetectLocation}
+            title={isDetectingLocation ? 'Detecting current location...' : 'Current Location (Click to refresh)'}
+            className="hidden sm:flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-white/5 hover:bg-white/10 border border-white/10 backdrop-blur-md text-xs text-slate-300 shadow-sm cursor-pointer transition-all active:scale-95"
+          >
+            <MapPin className={`w-3.5 h-3.5 text-rose-400 shrink-0 ${isDetectingLocation ? 'animate-bounce text-amber-400' : ''}`} />
             <span className="font-semibold text-white truncate max-w-[130px]">
               {cityName}
             </span>
             <span className="text-amber-400 font-mono font-bold">{formattedTemp}</span>
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse ml-0.5" title="Live Synced" />
-          </div>
+            <span
+              className={`w-2 h-2 rounded-full ${
+                isDetectingLocation ? 'bg-amber-400 animate-spin' : 'bg-emerald-400 animate-pulse'
+              } ml-0.5`}
+              title={isDetectingLocation ? 'Locating...' : 'Live Synced'}
+            />
+          </button>
 
           {/* Quick Sound preview */}
           <button
@@ -425,7 +444,14 @@ export default function WelcomePage({
               Ready to explore your atmosphere?
             </h4>
             <p className="text-xs sm:text-sm text-slate-300">
-              Live weather for <span className="text-amber-400 font-semibold">{cityName}</span> is ready and synchronized.
+              {isDetectingLocation && !weather ? (
+                <span>Detecting your local atmosphere in real-time...</span>
+              ) : (
+                <span>
+                  Live weather for <span className="text-amber-400 font-semibold">{cityName}</span>
+                  {countryName ? `, ${countryName}` : ''} is ready and synchronized.
+                </span>
+              )}
             </p>
           </div>
 

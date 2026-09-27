@@ -21,11 +21,25 @@ import { audioSynth } from './services/audioSynth';
 
 export default function App() {
   const [showWelcome, setShowWelcome] = useState(true);
-  const [location, setLocation] = useState({
-    name: 'San Francisco',
-    country: 'United States',
-    latitude: 37.7749,
-    longitude: -122.4194
+  const [location, setLocation] = useState(() => {
+    try {
+      const cached = localStorage.getItem('auracast_current_location');
+      if (cached) {
+        const parsed = JSON.parse(cached);
+        if (parsed?.latitude && parsed?.longitude) {
+          return parsed;
+        }
+      }
+    } catch {
+      // ignore
+    }
+    return {
+      name: 'Detecting Location...',
+      country: '',
+      latitude: null,
+      longitude: null,
+      isDetecting: true
+    };
   });
   const [weather, setWeather] = useState(null);
   const [mood, setMood] = useState(MOODS.RADIANT);
@@ -44,7 +58,7 @@ export default function App() {
   const [user, setUser] = useState(null);
 
   const [isAudioPlaying, setIsAudioPlaying] = useState(false);
-  const [isDetectingLocation, setIsDetectingLocation] = useState(false);
+  const [isDetectingLocation, setIsDetectingLocation] = useState(true);
   const [isLoadingWeather, setIsLoadingWeather] = useState(false);
 
   const [isFavoritesModalOpen, setIsFavoritesModalOpen] = useState(false);
@@ -85,6 +99,9 @@ export default function App() {
 
   // Fetch weather for a given location
   const loadWeather = useCallback(async (loc) => {
+    if (!loc || loc.latitude === null || loc.latitude === undefined || loc.longitude === null || loc.longitude === undefined) {
+      return;
+    }
     setIsLoadingWeather(true);
     try {
       const data = await WeatherAPI.getWeather(loc.latitude, loc.longitude);
@@ -136,13 +153,59 @@ export default function App() {
     }
   }, []);
 
-  // Initial load
+  // Initial current location detection on website open
   useEffect(() => {
-    loadWeather(location);
-  }, [loadWeather]);
+    let isMounted = true;
+
+    const detectInitialLocation = async () => {
+      setIsDetectingLocation(true);
+      try {
+        // Fast callback to immediately show real IP location without waiting for browser GPS prompt
+        const handleFastLocation = (fastLoc) => {
+          if (!isMounted || !fastLoc) return;
+          setLocation((prev) => {
+            if (prev?.source === 'gps') return prev;
+            return fastLoc;
+          });
+          loadWeather(fastLoc);
+          try {
+            localStorage.setItem('auracast_current_location', JSON.stringify(fastLoc));
+          } catch (e) {}
+        };
+
+        const accurateLoc = await WeatherAPI.detectAccurateLocation(handleFastLocation);
+        if (isMounted && accurateLoc) {
+          setLocation(accurateLoc);
+          loadWeather(accurateLoc);
+          try {
+            localStorage.setItem('auracast_current_location', JSON.stringify(accurateLoc));
+          } catch (e) {}
+        }
+      } catch (err) {
+        console.warn('Initial current location detection error:', err);
+      } finally {
+        if (isMounted) {
+          setIsDetectingLocation(false);
+        }
+      }
+    };
+
+    // If cached location already exists, load weather for it immediately
+    if (location && location.latitude !== null && location.longitude !== null) {
+      loadWeather(location);
+    }
+
+    // Always detect fresh accurate current location on website open
+    detectInitialLocation();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   // Handle location selection
   const handleSelectLocation = (loc) => {
+    if (!loc) return;
     setLocation(loc);
     loadWeather(loc);
 
@@ -164,35 +227,32 @@ export default function App() {
     localStorage.setItem('auracast_history', JSON.stringify(updated));
   };
 
-  // Browser Geolocation
-  const handleDetectLocation = () => {
-    if (!navigator.geolocation) {
-      alert('Geolocation is not supported by your browser.');
-      return;
-    }
-
+  // Browser Geolocation / Manual Refresh Detection
+  const handleDetectLocation = async () => {
     setIsDetectingLocation(true);
-    navigator.geolocation.getCurrentPosition(
-      async (pos) => {
-        const lat = pos.coords.latitude;
-        const lon = pos.coords.longitude;
-        const locationMeta = await WeatherAPI.reverseGeocode(lat, lon);
-        const loc = {
-          name: locationMeta.name,
-          country: locationMeta.country,
-          latitude: lat,
-          longitude: lon
-        };
-        handleSelectLocation(loc);
-        setIsDetectingLocation(false);
-      },
-      (err) => {
-        console.warn('Geolocation failed:', err);
-        setIsDetectingLocation(false);
-        alert('Could not access your location. Please enter a city manually.');
-      },
-      { timeout: 10000, enableHighAccuracy: true }
-    );
+    try {
+      const accurateLoc = await WeatherAPI.detectAccurateLocation((fastLoc) => {
+        setLocation(fastLoc);
+        loadWeather(fastLoc);
+        try {
+          localStorage.setItem('auracast_current_location', JSON.stringify(fastLoc));
+        } catch (e) {}
+      });
+
+      if (accurateLoc) {
+        handleSelectLocation(accurateLoc);
+        try {
+          localStorage.setItem('auracast_current_location', JSON.stringify(accurateLoc));
+        } catch (e) {}
+      } else {
+        alert('Could not detect your current location. Please enter a city manually in the search bar.');
+      }
+    } catch (err) {
+      console.warn('Geolocation detection error:', err);
+      alert('Could not access your location. Please enter a city manually.');
+    } finally {
+      setIsDetectingLocation(false);
+    }
   };
 
   // Toggle unit (°C / °F)
@@ -382,6 +442,8 @@ export default function App() {
           location={location}
           mood={mood}
           unit={unit}
+          isDetectingLocation={isDetectingLocation}
+          onDetectLocation={handleDetectLocation}
           onSelectLocation={handleSelectLocation}
         />
       ) : (
