@@ -24,7 +24,10 @@ import {
   detectClimateCategory,
   detectLocationRegion,
   getRegionalClimateSuggestions,
-  getSwiggySearchUrl
+  getSwiggySearchUrl,
+  MEAL_TIMES,
+  MEAL_TIME_METADATA,
+  detectCurrentMealTime
 } from '../services/foodSuggestionEngine';
 
 export default function FoodSuggestions({
@@ -44,10 +47,26 @@ export default function FoodSuggestions({
   const [selectedClimateKey, setSelectedClimateKey] = useState(null);
   const activeClimateKey = selectedClimateKey || autoClimateKey;
 
-  // Curated regional & climate-aware suggestions derived dynamically from location & climate
+  // Current natural meal time detected by the engine from local/timezone hour
+  const autoMealTimeKey = useMemo(
+    () => detectCurrentMealTime(weather?.timezone),
+    [weather?.timezone]
+  );
+
+  // Active selected meal time (defaults to auto-detected meal time)
+  const [selectedMealTimeKey, setSelectedMealTimeKey] = useState(null);
+  const activeMealTimeKey = selectedMealTimeKey || autoMealTimeKey;
+
+  // Curated regional & climate-aware suggestions derived dynamically from location, climate, and meal time
   const suggestionData = useMemo(() => {
-    return getRegionalClimateSuggestions(location, weather, mood, selectedClimateKey);
-  }, [location, weather, mood, selectedClimateKey]);
+    return getRegionalClimateSuggestions(
+      location,
+      weather,
+      mood,
+      selectedClimateKey,
+      selectedMealTimeKey
+    );
+  }, [location, weather, mood, selectedClimateKey, selectedMealTimeKey]);
 
   // Detected regional key for matching active quick pill
   const activeRegionKey = useMemo(() => {
@@ -151,12 +170,12 @@ export default function FoodSuggestions({
             </p>
           </div>
 
-          {/* Regional Identity & Detected Climate Badges */}
-          <div className="flex flex-col sm:flex-row items-start sm:items-center gap-3">
+          {/* Regional Identity, Meal Time & Detected Climate Badges */}
+          <div className="flex flex-wrap items-center gap-3">
             {/* Active Region Pill */}
             <div
               title={`Culinary Region: ${suggestionData.regionTitle}`}
-              className="px-4 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-200 backdrop-blur-md flex items-center gap-2.5 shadow-sm"
+              className="px-3.5 py-2.5 rounded-2xl bg-amber-500/10 border border-amber-500/25 text-amber-200 backdrop-blur-md flex items-center gap-2.5 shadow-sm"
             >
               <span className="text-2xl">{suggestionData.regionEmoji}</span>
               <div>
@@ -164,14 +183,31 @@ export default function FoodSuggestions({
                   <MapPin className="w-3 h-3" />
                   Regional Specialty
                 </p>
-                <p className="text-xs font-bold text-white truncate max-w-[160px]">
+                <p className="text-xs font-bold text-white truncate max-w-[150px]">
                   {suggestionData.regionName}
                 </p>
               </div>
             </div>
 
+            {/* Current Meal Time Pill */}
+            <div className="px-3.5 py-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-200 backdrop-blur-md flex items-center gap-2.5 shadow-sm">
+              <span className="text-2xl">{suggestionData.mealTimeEmoji}</span>
+              <div>
+                <p className="text-[10px] uppercase font-bold tracking-wider text-indigo-400 flex items-center gap-1">
+                  <Clock className="w-3 h-3" />
+                  {selectedMealTimeKey ? 'Selected Meal' : 'Current Dining Hour'}
+                </p>
+                <p className="text-xs font-bold text-white flex items-center gap-1.5">
+                  {suggestionData.mealTimeShortLabel}
+                  <span className="text-indigo-300/80 font-normal text-[11px] hidden sm:inline">
+                    ({suggestionData.mealTimeRange.split('–')[0].trim()})
+                  </span>
+                </p>
+              </div>
+            </div>
+
             {/* Current Detected Climate Pill */}
-            <div className="px-4 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center gap-3">
+            <div className="px-3.5 py-2.5 rounded-2xl bg-white/5 border border-white/10 backdrop-blur-md flex items-center gap-2.5">
               <span className="text-2xl">{suggestionData.climateEmoji}</span>
               <div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1">
@@ -219,6 +255,62 @@ export default function FoodSuggestions({
                   <span>{hub.emoji}</span>
                   <span>{hub.label}</span>
                   {isCurrent && <Check className="w-3 h-3 text-slate-950 stroke-[3]" />}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Meal Time & Dining Hours Selector Tabs */}
+        <div className="pt-2 pb-3">
+          <div className="flex items-center justify-between gap-3 mb-2.5">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Clock className="w-3.5 h-3.5 text-indigo-400" />
+              Time-Of-Day Dining Schedule (Accurate to Breakfast, Lunch, Snacks & Dinner)
+            </span>
+            {selectedMealTimeKey && (
+              <button
+                onClick={() => setSelectedMealTimeKey(null)}
+                className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold transition-colors"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset to Current Time ({MEAL_TIME_METADATA[autoMealTimeKey]?.shortLabel})
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {/* Auto Live Time Button */}
+            <button
+              onClick={() => setSelectedMealTimeKey(null)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                !selectedMealTimeKey
+                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-400/40'
+                  : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+              }`}
+            >
+              <Clock className="w-3.5 h-3.5" />
+              <span>Current Time ({MEAL_TIME_METADATA[autoMealTimeKey]?.emoji} {MEAL_TIME_METADATA[autoMealTimeKey]?.shortLabel})</span>
+            </button>
+
+            {/* Individual Meal Time Tabs */}
+            {Object.values(MEAL_TIME_METADATA).map((m) => {
+              const isActive = activeMealTimeKey === m.key;
+              return (
+                <button
+                  key={m.key}
+                  onClick={() => setSelectedMealTimeKey(m.key)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-indigo-500/30 text-white border border-indigo-400/50 shadow-lg font-bold'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                  }`}
+                >
+                  <span>{m.emoji}</span>
+                  <span>{m.label}</span>
+                  <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">
+                    ({m.timeRange})
+                  </span>
                 </button>
               );
             })}
@@ -280,9 +372,16 @@ export default function FoodSuggestions({
 
         {/* Climate & Regional Insight Banner */}
         <div className="p-4 rounded-2xl bg-white/5 border border-white/10 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                {suggestionData.mealTimeEmoji} {suggestionData.mealTimeLabel} ({suggestionData.mealTimeRange})
+              </span>
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                {suggestionData.climateEmoji} {suggestionData.climateLabel}
+              </span>
+            </div>
             <h3 className="text-base font-bold text-white font-display flex items-center gap-2">
-              <span>{suggestionData.climateEmoji}</span>
               <span>{suggestionData.headline}</span>
             </h3>
             <p className="text-xs text-slate-300 leading-relaxed max-w-3xl">
@@ -413,12 +512,19 @@ export default function FoodSuggestions({
                       <span>{item.rating}</span>
                     </div>
 
-                    {/* Weather Pairing Tag on Bottom of Image */}
-                    <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-xs">
-                      <span className="px-2 py-0.5 rounded-lg bg-black/75 backdrop-blur-md border border-white/10 text-amber-300 text-[11px] font-semibold truncate max-w-[200px]">
-                        {item.tag}
-                      </span>
-                      <span className="text-[11px] font-mono text-slate-300 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-lg border border-white/10">
+                    {/* Weather & Meal Pairing Tag on Bottom of Image */}
+                    <div className="absolute bottom-2.5 left-3 right-3 flex items-center justify-between text-xs gap-2">
+                      <div className="flex items-center gap-1.5 overflow-hidden">
+                        {item.mealBadge && (
+                          <span className="px-2 py-0.5 rounded-lg bg-indigo-950/85 backdrop-blur-md border border-indigo-400/30 text-indigo-200 text-[10px] font-bold whitespace-nowrap">
+                            {item.mealBadge}
+                          </span>
+                        )}
+                        <span className="px-2 py-0.5 rounded-lg bg-black/75 backdrop-blur-md border border-white/10 text-amber-300 text-[11px] font-semibold truncate max-w-[150px]">
+                          {item.tag}
+                        </span>
+                      </div>
+                      <span className="text-[11px] font-mono text-slate-300 bg-black/60 backdrop-blur-sm px-2 py-0.5 rounded-lg border border-white/10 shrink-0">
                         {item.calories}
                       </span>
                     </div>

@@ -14,6 +14,50 @@ export const CLIMATE_TYPES = {
   PLEASANT: 'pleasant'
 };
 
+// Meal Time Categories
+export const MEAL_TIMES = {
+  MORNING: 'morning',
+  AFTERNOON: 'afternoon',
+  EVENING: 'evening',
+  NIGHT: 'night'
+};
+
+// Meal Time Metadata for UI tabs & contextual guidance
+export const MEAL_TIME_METADATA = {
+  [MEAL_TIMES.MORNING]: {
+    key: MEAL_TIMES.MORNING,
+    label: 'Morning / Breakfast',
+    shortLabel: 'Morning',
+    emoji: '🌅',
+    timeRange: '5:00 AM – 11:30 AM',
+    tagline: 'Warm morning brews, crisp dosas, idlis, poha & energizing breakfast tiffins'
+  },
+  [MEAL_TIMES.AFTERNOON]: {
+    key: MEAL_TIMES.AFTERNOON,
+    label: 'Afternoon / Lunch',
+    shortLabel: 'Afternoon',
+    emoji: '☀️',
+    timeRange: '11:30 AM – 4:00 PM',
+    tagline: 'Hearty mid-day thalis, fragrant biryanis, rice bowls & nourishing meals'
+  },
+  [MEAL_TIMES.EVENING]: {
+    key: MEAL_TIMES.EVENING,
+    label: 'Evening / Snacks',
+    shortLabel: 'Evening',
+    emoji: '🌇',
+    timeRange: '4:00 PM – 7:30 PM',
+    tagline: 'Crispy bajjis, piping hot samosas, street chaats, coffee & cutting chai'
+  },
+  [MEAL_TIMES.NIGHT]: {
+    key: MEAL_TIMES.NIGHT,
+    label: 'Night / Dinner',
+    shortLabel: 'Night',
+    emoji: '🌙',
+    timeRange: '7:30 PM – 5:00 AM',
+    tagline: 'Satisfying dinner handis, comforting curries, kebabs, naan & midnight treats'
+  }
+};
+
 // Recognized Culinary Regional Hubs
 export const REGIONS = {
   MUMBAI: 'MUMBAI',
@@ -140,46 +184,84 @@ export function detectLocationRegion(location = {}) {
 }
 
 /**
- * Determine the matching climate category from weather parameters and active mood.
+ * Automatically determine the current meal time (Morning, Afternoon, Evening, Night)
+ * based on the local time or location timezone.
+ */
+export function detectCurrentMealTime(timezone = null) {
+  const now = new Date();
+  let hour = now.getHours() + now.getMinutes() / 60;
+  if (timezone) {
+    try {
+      const parts = new Intl.DateTimeFormat('en-US', {
+        timeZone: timezone,
+        hour: 'numeric',
+        minute: 'numeric',
+        hour12: false
+      }).formatToParts(now);
+      const h = Number(parts.find((p) => p.type === 'hour')?.value);
+      const m = Number(parts.find((p) => p.type === 'minute')?.value || 0);
+      if (!isNaN(h)) {
+        hour = h + m / 60;
+      }
+    } catch (e) {
+      // fallback to local hour
+    }
+  }
+
+  // 5:00 AM to 11:30 AM -> Morning (Breakfast & Tiffins)
+  if (hour >= 5 && hour < 11.5) return MEAL_TIMES.MORNING;
+  // 11:30 AM to 4:00 PM -> Afternoon (Lunch & Meals)
+  if (hour >= 11.5 && hour < 16) return MEAL_TIMES.AFTERNOON;
+  // 4:00 PM to 7:30 PM -> Evening (Chai, Snacks & Street Food)
+  if (hour >= 16 && hour < 19.5) return MEAL_TIMES.EVENING;
+  // 7:30 PM to 5:00 AM -> Night (Dinner & Late-night Cravings)
+  return MEAL_TIMES.NIGHT;
+}
+
+/**
+ * Determine the matching climate category from real-time meteorological variables.
+ * Prioritizes active precipitation and storm dynamics over static temperature.
  */
 export function detectClimateCategory(weather, mood) {
   const current = weather?.current;
-  const tempC = current?.tempC ?? 22;
+  const tempC = current?.tempC ?? 24;
   const wmoCode = current?.wmoCode ?? 0;
   const precipitation = current?.precipitationMm ?? 0;
   const windSpeed = current?.windSpeedKm ?? 10;
+  const isDay = current?.isDay ?? 1;
+  const cloudCover = current?.cloudCover ?? 20;
   const moodId = mood?.id;
 
   // 1. Thunderstorms / Severe Squalls
-  if ([95, 96, 99].includes(wmoCode) || moodId === 'stormy' || (windSpeed > 40 && precipitation > 4)) {
+  if ([95, 96, 99].includes(wmoCode) || moodId === 'stormy' || (windSpeed > 38 && precipitation > 2)) {
     return CLIMATE_TYPES.STORMY;
   }
 
-  // 2. Snow / Chilly / Freezing Winter
-  if (
-    [71, 73, 75, 77, 85, 86].includes(wmoCode) ||
-    tempC <= 14 ||
-    moodId === 'tranquil'
-  ) {
-    return CLIMATE_TYPES.COLD;
-  }
-
-  // 3. Rain / Drizzle / Wet Weather
+  // 2. Rain / Drizzle / Wet Weather (Rain ALWAYS takes priority over heat or mild weather)
   if (
     [51, 53, 55, 56, 57, 61, 63, 65, 66, 67, 80, 81, 82].includes(wmoCode) ||
-    precipitation > 0.4 ||
+    precipitation > 0.1 ||
     moodId === 'cozy'
   ) {
     return CLIMATE_TYPES.RAINY;
   }
 
-  // 4. Hot / Scorching / Radiant Heat
-  if (tempC >= 28 || (tempC >= 26 && [0, 1].includes(wmoCode) && moodId === 'radiant')) {
+  // 3. Snow / Chilly / Freezing Winter
+  if (
+    [71, 73, 75, 77, 85, 86].includes(wmoCode) ||
+    tempC <= 16 ||
+    moodId === 'tranquil'
+  ) {
+    return CLIMATE_TYPES.COLD;
+  }
+
+  // 4. Hot / Scorching Summer Heat (>= 29°C, or >= 27°C during bright sunny day)
+  if (tempC >= 29 || (tempC >= 27 && isDay === 1 && [0, 1].includes(wmoCode) && moodId === 'radiant')) {
     return CLIMATE_TYPES.HOT;
   }
 
-  // 5. Overcast / Fog / Gloomy
-  if ([3, 45, 48].includes(wmoCode) || moodId === 'gloomy') {
+  // 5. Overcast / Gloomy / Dense Fog
+  if ([3, 45, 48].includes(wmoCode) || cloudCover >= 80 || moodId === 'gloomy') {
     return CLIMATE_TYPES.OVERCAST;
   }
 
@@ -689,16 +771,114 @@ export const REGIONAL_FOOD_DATABASE = {
   },
 
   [REGIONS.HYDERABAD]: {
-    regionName: 'Hyderabad, Telangana',
-    regionTitle: 'Nizam\'s Royal Biryani & Nizami Heritage',
+    regionName: 'Hyderabad & Andhra Pradesh',
+    regionTitle: 'Nizami Biryanis & Andhra Gastronomy',
     regionEmoji: '👑',
     climateProfiles: {
       default: {
-        headline: 'Nizami Dum Biryanis & Fragrant Irani Chai',
-        pairingQuote: 'Slow-cooked mutton handis, fiery salan, and fragrant Irani chai define Hyderabad\'s timeless culinary supremacy.',
+        headline: 'Authentic Hyderabadi & Andhra Specialties',
+        pairingQuote: 'From royal sealed coal dum biryanis to fiery Andhra karam dosas and Charminar Irani chai.',
         items: [
+          // --- MORNING: Breakfast & Tiffins ---
           {
-            id: 'hyd-1',
+            id: 'hyd-morn-1',
+            name: 'Babai Hotel Ghee Karam Dosa with Allam Pachadi',
+            category: 'Street Food',
+            tag: '🧈 Andhra Golden Legend',
+            vibe: 'Ghee Roasted Thin Crepe & Fiery Red Podi',
+            description: 'Crispy golden crepe doused in pure desi ghee, layered with spicy red chili garlic podi, served with sweet-tangy ginger chutney.',
+            image: 'https://images.unsplash.com/photo-1668236543090-82eba5ee5976?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '15-20 min',
+            calories: '~310 kcal',
+            priceEstimate: '₹90 - ₹150',
+            isVeg: true,
+            mealTimes: ['morning'],
+            climates: ['rainy', 'pleasant', 'cold', 'overcast'],
+            mealBadge: '🌅 Breakfast',
+            climateBadge: '🌧️ Morning Classic',
+            searchQuery: 'Ghee Karam Dosa'
+          },
+          {
+            id: 'hyd-morn-2',
+            name: 'Steaming Ghee Idli with Karampodi & Sambar',
+            category: 'Comfort Food',
+            tag: '☁️ Cloud Soft Andhra Tiffin',
+            vibe: 'Piping Hot Idlis Drenched in Pure Ghee',
+            description: 'Melt-in-mouth steamed rice and lentil cakes showered with roasted lentil gunpowder, served with hot drumstick sambar.',
+            image: 'https://images.unsplash.com/photo-1589301760014-d929f3979dbc?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '10-15 min',
+            calories: '~220 kcal',
+            priceEstimate: '₹70 - ₹120',
+            isVeg: true,
+            mealTimes: ['morning'],
+            climates: ['rainy', 'hot', 'cold', 'pleasant', 'overcast'],
+            mealBadge: '🌅 Breakfast',
+            climateBadge: '✨ Steamy Comfort',
+            searchQuery: 'Ghee Podi Idli'
+          },
+          {
+            id: 'hyd-morn-3',
+            name: 'Crispy Medu Vada with Coconut Chutney',
+            category: 'Street Food',
+            tag: '⭐ Golden Crunch Classic',
+            vibe: 'Crispy Peppercorn Lentil Donuts',
+            description: 'Deep-fried golden urad dal fritters studded with crushed black pepper, ginger, and curry leaves with fresh coconut dip.',
+            image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=700&q=80',
+            rating: '4.8',
+            prepTime: '15-20 min',
+            calories: '~280 kcal',
+            priceEstimate: '₹60 - ₹110',
+            isVeg: true,
+            mealTimes: ['morning'],
+            climates: ['rainy', 'pleasant', 'cold', 'stormy'],
+            mealBadge: '🌅 Breakfast',
+            climateBadge: '🌧️ Monsoon Crisp',
+            searchQuery: 'Medu Vada Sambar'
+          },
+          {
+            id: 'hyd-morn-4',
+            name: 'Andhra Pesarattu Upma with Allam Chutney',
+            category: 'Comfort Food',
+            tag: '🌿 Coastal Andhra Heritage',
+            vibe: 'Green Moong Crepe Stuffed with Semolina Upma',
+            description: 'Wholesome protein-rich green gram crepe cooked crisp, stuffed with spicy roasted upma, served with allam ginger chutney.',
+            image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '15-20 min',
+            calories: '~330 kcal',
+            priceEstimate: '₹90 - ₹140',
+            isVeg: true,
+            mealTimes: ['morning'],
+            climates: ['rainy', 'pleasant', 'cold', 'hot'],
+            mealBadge: '🌅 Breakfast',
+            climateBadge: '☀️ Energizing',
+            searchQuery: 'Pesarattu Upma'
+          },
+          {
+            id: 'hyd-morn-5',
+            name: 'South Indian Filter Kaapi & Irani Chai',
+            category: 'Beverages',
+            tag: '☕ Aromatic Frothy Brew',
+            vibe: 'Chicory Roasted Beans & Frothy Steamed Milk',
+            description: 'Traditional slow-dripped chicory-infused strong coffee frothed in stainless steel dabara set with steaming fresh milk.',
+            image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '5-10 min',
+            calories: '~95 kcal',
+            priceEstimate: '₹40 - ₹80',
+            isVeg: true,
+            mealTimes: ['morning', 'evening'],
+            climates: ['rainy', 'cold', 'stormy', 'overcast', 'pleasant'],
+            mealBadge: '🌅 Morning Brew',
+            climateBadge: '🌧️ Soul Warmer',
+            searchQuery: 'Filter Coffee'
+          },
+
+          // --- AFTERNOON: Hearty Lunch & Midday Meals ---
+          {
+            id: 'hyd-noon-1',
             name: 'Authentic Hyderabadi Dum Mutton Biryani',
             category: 'Hearty Meals',
             tag: '👑 Nizam\'s Royal Masterpiece',
@@ -710,43 +890,152 @@ export const REGIONAL_FOOD_DATABASE = {
             calories: '~580 kcal',
             priceEstimate: '₹280 - ₹440',
             isVeg: false,
+            mealTimes: ['afternoon', 'night'],
+            climates: ['rainy', 'stormy', 'pleasant', 'cold', 'hot'],
+            mealBadge: '☀️ Lunch',
+            climateBadge: '🔥 Royal Handi',
             searchQuery: 'Hyderabadi Mutton Biryani'
           },
           {
-            id: 'hyd-2',
-            name: 'Mirchi Ka Salan with Bagara Rice',
-            category: 'Comfort Food',
-            tag: '🌶️ Royal Peanut & Sesame Gravy',
-            vibe: 'Slow Roasted Green Chili Salan',
-            description: 'Mild green peppers simmered in a roasted peanut, sesame seed, coconut, and tamarind curry sauce.',
-            image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
-            rating: '4.8',
-            prepTime: '20-25 min',
-            calories: '~360 kcal',
-            priceEstimate: '₹160 - ₹240',
-            isVeg: true,
-            searchQuery: 'Mirchi Ka Salan'
+            id: 'hyd-noon-2',
+            name: 'Hyderabadi Chicken Dum Biryani Handi',
+            category: 'Hearty Meals',
+            tag: '🍗 Golden Saffron Basmati',
+            vibe: 'Fragrant Kacchi Dum Chicken & Salan',
+            description: 'Tender bone-in chicken marinated in yogurt and Hyderabadi pot spices, slow dum-cooked with aged basmati rice and brown onions.',
+            image: 'https://images.unsplash.com/photo-1589302168068-964664d93dc0?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '25-30 min',
+            calories: '~520 kcal',
+            priceEstimate: '₹240 - ₹380',
+            isVeg: false,
+            mealTimes: ['afternoon', 'night'],
+            climates: ['rainy', 'stormy', 'pleasant', 'cold', 'hot'],
+            mealBadge: '☀️ Lunch',
+            climateBadge: '🍗 All-Weather Star',
+            searchQuery: 'Hyderabadi Chicken Biryani'
           },
           {
-            id: 'hyd-3',
-            name: 'Irani Chai with Osmania Biscuits',
+            id: 'hyd-noon-3',
+            name: 'Fiery Andhra Gongura Mutton / Chicken with Rice',
+            category: 'Hearty Meals',
+            tag: '🌶️ Tangy Gongura Delicacy',
+            vibe: 'Sorrel Leaf Puree Simmered with Tender Meat',
+            description: 'Signature Andhra dish of succulent meat simmered in tangy red sorrel (gongura) leaf masala, best mixed with hot rice and ghee.',
+            image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
+            rating: '4.8',
+            prepTime: '25-35 min',
+            calories: '~490 kcal',
+            priceEstimate: '₹260 - ₹390',
+            isVeg: false,
+            mealTimes: ['afternoon'],
+            climates: ['rainy', 'cold', 'pleasant', 'stormy'],
+            mealBadge: '☀️ Lunch',
+            climateBadge: '🌶️ Andhra Fire',
+            searchQuery: 'Gongura Mutton Rice'
+          },
+          {
+            id: 'hyd-noon-4',
+            name: 'Classic Andhra Bhojanam (South Indian Meals Thali)',
+            category: 'Hearty Meals',
+            tag: '🍚 Grand Traditional Thali',
+            vibe: 'Pappu, Ghee, Avakaya, Rasam, Sambar & Curd',
+            description: 'Wholesome Andhra feast with Mudda Pappu, pure ghee, fiery Avakaya mango pickle, spiced rasam, kootu, curd, and crunchy papad.',
+            image: 'https://images.unsplash.com/photo-1610057099443-fde8c4d50f91?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '20-25 min',
+            calories: '~460 kcal',
+            priceEstimate: '₹150 - ₹240',
+            isVeg: true,
+            mealTimes: ['afternoon'],
+            climates: ['pleasant', 'hot', 'rainy', 'overcast'],
+            mealBadge: '☀️ Lunch',
+            climateBadge: '🌾 Authentic Feast',
+            searchQuery: 'Andhra Meals Thali'
+          },
+          {
+            id: 'hyd-noon-5',
+            name: 'Cooling Perugu Annam (Curd Rice) & Spiced Majjiga',
+            category: 'Comfort Food',
+            tag: '🥥 Summer Digestive Bliss',
+            vibe: 'Tempered Creamy Curd Rice & Chilled Buttermilk',
+            description: 'Fresh homemade curd mixed with soft rice, tempered with mustard, ginger, curry leaves, and pomegranate, paired with salted buttermilk.',
+            image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
+            rating: '4.8',
+            prepTime: '10-15 min',
+            calories: '~280 kcal',
+            priceEstimate: '₹80 - ₹140',
+            isVeg: true,
+            mealTimes: ['afternoon', 'night'],
+            climates: ['hot', 'pleasant'],
+            mealBadge: '☀️ Lunch Cooler',
+            climateBadge: '☀️ Heat Buster',
+            searchQuery: 'Curd Rice Buttermilk'
+          },
+
+          // --- EVENING: Chai, Street Bites & Snacks ---
+          {
+            id: 'hyd-eve-1',
+            name: 'Andhra Stuffed Mirchi Bajji with Ajwain & Onions',
+            category: 'Street Food',
+            tag: '🌶️ Coastal Street Sensation',
+            vibe: 'Besan Fried Bhavnagri Chili Stuffed with Spiced Onion',
+            description: 'Plump green chilies stuffed with carom seeds and lemon-tossed chopped onions, dipped in spiced chickpea batter and double-fried crispy.',
+            image: 'https://images.unsplash.com/photo-1601050690597-df0568f70950?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '15-20 min',
+            calories: '~260 kcal',
+            priceEstimate: '₹60 - ₹100',
+            isVeg: true,
+            mealTimes: ['evening'],
+            climates: ['rainy', 'stormy', 'pleasant', 'cold'],
+            mealBadge: '🌇 Evening Snack',
+            climateBadge: '🌧️ Monsoon Legend',
+            searchQuery: 'Mirchi Bajji'
+          },
+          {
+            id: 'hyd-eve-2',
+            name: 'Hot Crispy Punugulu with Spicy Allam Chutney',
+            category: 'Street Food',
+            tag: '🟡 Vijayawada Street Classic',
+            vibe: 'Deep-Fried Fermented Batter Crisps',
+            description: 'Bite-sized crispy fritters made from fermented idli-dosa batter, fried golden and served with fiery tomato-ginger red chutney.',
+            image: 'https://images.unsplash.com/photo-1626777552726-4a6b54c97e46?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '15-20 min',
+            calories: '~240 kcal',
+            priceEstimate: '₹60 - ₹100',
+            isVeg: true,
+            mealTimes: ['evening'],
+            climates: ['rainy', 'stormy', 'pleasant', 'cold'],
+            mealBadge: '🌇 Evening Snack',
+            climateBadge: '🌧️ Rain Craving',
+            searchQuery: 'Punugulu'
+          },
+          {
+            id: 'hyd-eve-3',
+            name: 'Irani Chai with Sweet & Salty Osmania Biscuits',
             category: 'Snacks & Tea',
-            tag: '☕ Charminar Café Classic',
-            vibe: 'Condensed Milk Decoction & Butter Biscuits',
+            tag: '☕ Charminar Heritage',
+            vibe: 'Slow Brewed Milk Tea & Crumbly Biscuits',
             description: 'Slow-brewed strong tea blended with rich condensed milk, paired with sweet and salty crumbly Osmania bakery biscuits.',
             image: 'https://images.unsplash.com/photo-1514432324607-a09d9b4aefdd?auto=format&fit=crop&w=700&q=80',
             rating: '4.9',
-            prepTime: '15-20 min',
+            prepTime: '10-15 min',
             calories: '~190 kcal',
             priceEstimate: '₹80 - ₹140',
             isVeg: true,
+            mealTimes: ['evening', 'morning'],
+            climates: ['rainy', 'cold', 'overcast', 'pleasant', 'stormy'],
+            mealBadge: '🌇 Evening Chai',
+            climateBadge: '☕ Timeless Classic',
             searchQuery: 'Irani Chai Osmania Biscuits'
           },
           {
-            id: 'hyd-4',
-            name: 'Hyderabadi Chicken 65 & Rumali Roti',
+            id: 'hyd-eve-4',
+            name: 'Hyderabadi Chicken 65 with Crispy Curry Leaves',
             category: 'Snacks',
-            tag: '🍗 Spicy South Indulgence',
+            tag: '🍗 Fiery Red Appetizer',
             vibe: 'Crispy Curry Leaves & Red Chili Toss',
             description: 'Bite-sized chicken chunks marinated in ginger, garlic, red chilies, and tossed crisp with mustard seeds and fresh curry leaves.',
             image: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=700&q=80',
@@ -755,11 +1044,112 @@ export const REGIONAL_FOOD_DATABASE = {
             calories: '~340 kcal',
             priceEstimate: '₹220 - ₹320',
             isVeg: false,
+            mealTimes: ['evening', 'night'],
+            climates: ['rainy', 'pleasant', 'cold', 'stormy'],
+            mealBadge: '🌇 Evening / Dinner',
+            climateBadge: '🔥 Spicy Crunch',
             searchQuery: 'Chicken 65 Hyderabad'
           },
           {
-            id: 'hyd-5',
-            name: 'Double Ka Meetha with Cashews & Saffron',
+            id: 'hyd-eve-5',
+            name: 'Chilled Royal Falooda with Rose Milk & Sabja',
+            category: 'Sweet Treats',
+            tag: '🍨 Summer Refreshment',
+            vibe: 'Cooling Rose Milk, Vermicelli & Vanilla Ice Cream',
+            description: 'Layers of chilled rose syrup, hydrated basil seeds, silky vermicelli noodles, chilled milk, and a scoop of royal vanilla ice cream.',
+            image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=700&q=80',
+            rating: '4.8',
+            prepTime: '10-15 min',
+            calories: '~340 kcal',
+            priceEstimate: '₹120 - ₹190',
+            isVeg: true,
+            mealTimes: ['evening', 'night'],
+            climates: ['hot', 'pleasant'],
+            mealBadge: '🌇 Evening Chiller',
+            climateBadge: '☀️ Summer Cooler',
+            searchQuery: 'Royal Falooda'
+          },
+
+          // --- NIGHT: Dinner & Late-Night Comfort ---
+          {
+            id: 'hyd-nite-1',
+            name: 'Royal Hyderabadi Mutton Dum Biryani Handi',
+            category: 'Hearty Meals',
+            tag: '🌙 Nizam\'s Midnight Feast',
+            vibe: 'Dum-Cooked Spiced Tender Mutton & Raita',
+            description: 'Clay-pot sealed dum biryani served piping hot with fiery Mirchi ka Salan, cool cucumber onion raita, and boiled egg.',
+            image: 'https://images.unsplash.com/photo-1563379091339-03b21ab4a4f8?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '25-35 min',
+            calories: '~590 kcal',
+            priceEstimate: '₹290 - ₹460',
+            isVeg: false,
+            mealTimes: ['night', 'afternoon'],
+            climates: ['rainy', 'cold', 'pleasant', 'stormy', 'hot'],
+            mealBadge: '🌙 Dinner',
+            climateBadge: '👑 Ultimate Feast',
+            searchQuery: 'Hyderabadi Dum Biryani'
+          },
+          {
+            id: 'hyd-nite-2',
+            name: 'Andhra Chilli Chicken with Hot Rumali Roti',
+            category: 'Hearty Meals',
+            tag: '🌶️ Green Chili Infusion',
+            vibe: 'Spicy Green Chili Chicken & Paper-Thin Rotis',
+            description: 'Tender chicken pieces sautéed in aromatic green chili paste, onions, and curry leaves, wrapped inside paper-thin hot rumali rotis.',
+            image: 'https://images.unsplash.com/photo-1599488615731-7e5c2823ff28?auto=format&fit=crop&w=700&q=80',
+            rating: '4.8',
+            prepTime: '20-25 min',
+            calories: '~410 kcal',
+            priceEstimate: '₹230 - ₹340',
+            isVeg: false,
+            mealTimes: ['night'],
+            climates: ['rainy', 'cold', 'pleasant', 'stormy'],
+            mealBadge: '🌙 Dinner',
+            climateBadge: '🌶️ Andhra Kick',
+            searchQuery: 'Andhra Chilli Chicken'
+          },
+          {
+            id: 'hyd-nite-3',
+            name: 'Rich Hyderabadi Mutton Haleem with Ghee',
+            category: 'Comfort Food',
+            tag: '🍲 Slow Simmered Meat & Wheat',
+            vibe: 'Pounded Mutton, Broken Wheat & Clarified Butter',
+            description: 'Slow-cooked for 8 hours with broken wheat, lentils, tender meat, and aromatics, topped with barista onions, lemon, and mint.',
+            image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '20-30 min',
+            calories: '~470 kcal',
+            priceEstimate: '₹240 - ₹380',
+            isVeg: false,
+            mealTimes: ['night'],
+            climates: ['rainy', 'cold', 'stormy', 'overcast'],
+            mealBadge: '🌙 Dinner',
+            climateBadge: '🍲 Comfort Bowl',
+            searchQuery: 'Hyderabadi Haleem'
+          },
+          {
+            id: 'hyd-nite-4',
+            name: 'Paneer Butter Masala with Butter Garlic Naan',
+            category: 'Comfort Food',
+            tag: '🧈 Silky Cashew Tomato Makhani',
+            vibe: 'Tandoori Baked Naan & Creamy Cottage Cheese',
+            description: 'Fresh paneer cubes simmered in a velvet tomato, cashew, and butter gravy, paired with sizzling garlic coriander butter naan.',
+            image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
+            rating: '4.9',
+            prepTime: '20-25 min',
+            calories: '~450 kcal',
+            priceEstimate: '₹180 - ₹280',
+            isVeg: true,
+            mealTimes: ['night', 'afternoon'],
+            climates: ['rainy', 'cold', 'pleasant', 'overcast'],
+            mealBadge: '🌙 Dinner',
+            climateBadge: '🧈 Vegetarian Delight',
+            searchQuery: 'Paneer Butter Masala Garlic Naan'
+          },
+          {
+            id: 'hyd-nite-5',
+            name: 'Royal Double Ka Meetha with Saffron Rabdi',
             category: 'Sweet Treats',
             tag: '🍯 Royal Bread Pudding',
             vibe: 'Ghee Fried Bread Soaked in Cardamom Milk',
@@ -770,22 +1160,30 @@ export const REGIONAL_FOOD_DATABASE = {
             calories: '~390 kcal',
             priceEstimate: '₹140 - ₹210',
             isVeg: true,
+            mealTimes: ['night'],
+            climates: ['rainy', 'cold', 'pleasant', 'hot'],
+            mealBadge: '🌙 Dessert',
+            climateBadge: '🍯 Sweet Finish',
             searchQuery: 'Double Ka Meetha'
           },
           {
-            id: 'hyd-6',
-            name: 'Rich Hyderabadi Mutton Haleem',
-            category: 'Hearty Meals',
-            tag: '🍲 Slow Simmered Meat & Wheat',
-            vibe: 'Pounded Mutton, Broken Wheat & Ghee',
-            description: 'Slow-cooked for 8 hours with broken wheat, lentils, tender meat, and aromatics, served with fried onions and mint.',
-            image: 'https://images.unsplash.com/photo-1546833999-b9f581a1996d?auto=format&fit=crop&w=700&q=80',
-            rating: '4.9',
-            prepTime: '20-30 min',
-            calories: '~470 kcal',
-            priceEstimate: '₹240 - ₹380',
-            isVeg: false,
-            searchQuery: 'Hyderabadi Haleem'
+            id: 'hyd-nite-6',
+            name: 'Traditional Matka Malai Kulfi on Stick',
+            category: 'Sweet Treats',
+            tag: '🍨 Rich Dense Milk Delicacy',
+            vibe: 'Slow Reduced Full Cream Milk & Cardamom',
+            description: 'Slow-simmered rabri frozen in earthenware pots, infused with green cardamom, saffron strands, and roasted pistachios.',
+            image: 'https://images.unsplash.com/photo-1563805042-7684c019e1cb?auto=format&fit=crop&w=700&q=80',
+            rating: '4.8',
+            prepTime: '5-10 min',
+            calories: '~210 kcal',
+            priceEstimate: '₹70 - ₹120',
+            isVeg: true,
+            mealTimes: ['night', 'evening'],
+            climates: ['hot', 'pleasant'],
+            mealBadge: '🌙 Dessert',
+            climateBadge: '☀️ Summer Chill',
+            searchQuery: 'Matka Kulfi'
           }
         ]
       }
@@ -2801,65 +3199,293 @@ export const POPULAR_CULINARY_HUBS = [
 ];
 
 /**
- * Get personalized culinary recommendations taking BOTH Location and Climate into account.
+ * Helper to infer meal time categories if not explicitly assigned
  */
-export function getRegionalClimateSuggestions(location, weather, mood, climateOverride = null) {
-  const regionKey = detectLocationRegion(location);
-  const activeClimate = climateOverride || detectClimateCategory(weather, mood);
-  const cityName = location?.name || 'Your Area';
-  const meta = CLIMATE_METADATA[activeClimate] || CLIMATE_METADATA[CLIMATE_TYPES.PLEASANT];
+export function inferMealTimes(item) {
+  if (Array.isArray(item.mealTimes) && item.mealTimes.length > 0) {
+    return item.mealTimes;
+  }
+  const text = `${item.name} ${item.category} ${item.description || ''} ${item.tag || ''}`.toLowerCase();
+  const times = [];
+  if (/breakfast|dosa|idli|poha|vada|upma|pancake|croissant|coffee|tea|paratha|puri|tiffin|morning|oats|bagel|chai/.test(text)) {
+    times.push(MEAL_TIMES.MORNING);
+  }
+  if (/lunch|thali|biryani|rice|meals|curry|pulao|pasta|sandwich|dal|bhojanam|khichdi|ramen|pho|salan|roti/.test(text)) {
+    times.push(MEAL_TIMES.AFTERNOON);
+  }
+  if (/snack|chai|bajji|pakora|pakoda|samosa|chaat|bonda|punugulu|momo|fries|bhel|bites|street|tea|coffee|pastry|falooda/.test(text)) {
+    times.push(MEAL_TIMES.EVENING);
+  }
+  if (/dinner|night|biryani|kebab|naan|rogan|haleem|dessert|kulfi|sweet|halwa|ice cream|pizza|burger|roll|shawarma/.test(text)) {
+    times.push(MEAL_TIMES.NIGHT);
+  }
+  return times.length > 0 ? times : [MEAL_TIMES.AFTERNOON, MEAL_TIMES.NIGHT];
+}
 
-  // 1. Check if regional database has specific food for this region
-  const regionalData = REGIONAL_FOOD_DATABASE[regionKey];
+/**
+ * Helper to infer climate conditions if not explicitly assigned
+ */
+export function inferClimates(item) {
+  if (Array.isArray(item.climates) && item.climates.length > 0) {
+    return item.climates;
+  }
+  const text = `${item.name} ${item.category} ${item.description || ''} ${item.tag || ''}`.toLowerCase();
+  const list = [];
+  if (/hot|spicy|crispy|fried|chai|pakora|bajji|samosa|soup|stew|haleem|dumpling|monsoon|rain/.test(text)) {
+    list.push(CLIMATE_TYPES.RAINY, CLIMATE_TYPES.STORMY);
+  }
+  if (/chilled|ice|cold|kulfi|falooda|shake|lassi|juice|buttermilk|majjiga|salad|summer|cooling|refresh/.test(text)) {
+    list.push(CLIMATE_TYPES.HOT);
+  }
+  if (/soup|stew|curry|naan|gravy|warm|hot|rogan|halwa|sheera|paya|nihari|coffee|tea/.test(text)) {
+    list.push(CLIMATE_TYPES.COLD, CLIMATE_TYPES.OVERCAST);
+  }
+  if (list.length === 0) {
+    list.push(CLIMATE_TYPES.PLEASANT, CLIMATE_TYPES.HOT, CLIMATE_TYPES.RAINY);
+  }
+  return list;
+}
 
-  if (regionalData) {
-    const firstAvailableProfile = Object.values(regionalData.climateProfiles)[0];
-    const climateProfile =
-      regionalData.climateProfiles[activeClimate] ||
-      regionalData.climateProfiles.default ||
-      firstAvailableProfile ||
-      GLOBAL_CLIMATE_DATABASE[activeClimate] ||
-      GLOBAL_CLIMATE_DATABASE[CLIMATE_TYPES.PLEASANT];
+/**
+ * Generate clean meal badge for dish display
+ */
+export function getMealBadge(mealTimes) {
+  if (mealTimes.includes(MEAL_TIMES.MORNING)) return '🌅 Breakfast';
+  if (mealTimes.includes(MEAL_TIMES.EVENING)) return '🌇 Evening Snack';
+  if (mealTimes.includes(MEAL_TIMES.NIGHT)) return '🌙 Dinner';
+  if (mealTimes.includes(MEAL_TIMES.AFTERNOON)) return '☀️ Lunch';
+  return '✨ All-Day Classic';
+}
 
+/**
+ * Contextual headline and pairing quote generator matching BOTH time of day and climate
+ */
+function generateContextualPairing(cityName, mealTime, climate) {
+  const mealLabels = {
+    [MEAL_TIMES.MORNING]: 'Morning Breakfast & Tiffins',
+    [MEAL_TIMES.AFTERNOON]: 'Hearty Midday Lunch',
+    [MEAL_TIMES.EVENING]: 'Evening Chai & Street Bites',
+    [MEAL_TIMES.NIGHT]: 'Dinner & Late-Night Comfort'
+  };
+
+  const climateLabels = {
+    [CLIMATE_TYPES.RAINY]: 'Monsoon Rain',
+    [CLIMATE_TYPES.COLD]: 'Chilly Climate',
+    [CLIMATE_TYPES.HOT]: 'Warm & Radiant Weather',
+    [CLIMATE_TYPES.STORMY]: 'Thunderstorm Atmosphere',
+    [CLIMATE_TYPES.OVERCAST]: 'Cloudy & Overcast Day',
+    [CLIMATE_TYPES.PLEASANT]: 'Pleasant & Breezy Air'
+  };
+
+  const mealMeta = MEAL_TIME_METADATA[mealTime] || MEAL_TIME_METADATA[MEAL_TIMES.NIGHT];
+  const headline = `${mealMeta.emoji} ${mealLabels[mealTime]} • ${climateLabels[climate]} in ${cityName}`;
+
+  if (mealTime === MEAL_TIMES.MORNING) {
+    if (climate === CLIMATE_TYPES.RAINY || climate === CLIMATE_TYPES.STORMY) {
+      return {
+        headline,
+        quote: `Start your rainy morning in ${cityName} with piping hot tiffins, steaming crispy dosas, and aromatic hot coffee or ginger chai.`
+      };
+    }
+    if (climate === CLIMATE_TYPES.HOT) {
+      return {
+        headline,
+        quote: `Stay light and energized this warm morning in ${cityName} with soft steamed idlis, fresh coconut chutney, and refreshing cool sips.`
+      };
+    }
+    if (climate === CLIMATE_TYPES.COLD) {
+      return {
+        headline,
+        quote: `Warm up your chilly morning in ${cityName} with fresh stuffed parathas, hot poha, and steaming cups of kulhad chai.`
+      };
+    }
     return {
-      regionKey,
-      regionName: regionalData.regionName || cityName,
-      regionTitle: regionalData.regionTitle,
-      regionEmoji: regionalData.regionEmoji || '📍',
-      climateKey: activeClimate,
-      climateLabel: meta.label,
-      climateEmoji: meta.emoji,
-      accentColor: meta.accentColor,
-      atmosphereTip: meta.atmosphereTip,
-      headline: climateProfile.headline,
-      pairingQuote: climateProfile.pairingQuote,
-      items: (climateProfile.items || []).map((item) => ({
-        ...item,
-        swiggyUrl: getSwiggySearchUrl(item.searchQuery || item.name, location?.name)
-      }))
+      headline,
+      quote: `A pleasant morning in ${cityName} is best paired with golden crisp dosas, soft idlis, and freshly brewed filter coffee.`
     };
   }
 
-  // 2. Global fallback adapted to the city and climate
-  const fallbackProfile =
-    GLOBAL_CLIMATE_DATABASE[activeClimate] || GLOBAL_CLIMATE_DATABASE[CLIMATE_TYPES.PLEASANT];
+  if (mealTime === MEAL_TIMES.AFTERNOON) {
+    if (climate === CLIMATE_TYPES.RAINY || climate === CLIMATE_TYPES.STORMY) {
+      return {
+        headline,
+        quote: `The rainy midday atmosphere in ${cityName} calls for rich steaming biryanis, spicy gravies, and comforting warm rice bowls.`
+      };
+    }
+    if (climate === CLIMATE_TYPES.HOT) {
+      return {
+        headline,
+        quote: `Beat the afternoon heat in ${cityName} with refreshing curd rice, light aromatic thalis, and chilled spiced buttermilk.`
+      };
+    }
+    return {
+      headline,
+      quote: `Enjoy a hearty afternoon in ${cityName} with regional thalis, flavorful dum biryanis, and wholesome comforting curries.`
+    };
+  }
+
+  if (mealTime === MEAL_TIMES.EVENING) {
+    if (climate === CLIMATE_TYPES.RAINY || climate === CLIMATE_TYPES.STORMY) {
+      return {
+        headline,
+        quote: `Nothing beats a rainy evening in ${cityName}: fiery stuffed bajjis, crispy hot pakodas, and steaming cutting chai.`
+      };
+    }
+    if (climate === CLIMATE_TYPES.HOT) {
+      return {
+        headline,
+        quote: `Unwind this warm evening in ${cityName} with chilled royal falooda, tangy street chaats, and refreshing iced beverages.`
+      };
+    }
+    return {
+      headline,
+      quote: `Sundown in ${cityName} calls for hot street chaats, crispy snacks, Irani chai, and freshly prepared bites.`
+    };
+  }
+
+  // NIGHT
+  if (climate === CLIMATE_TYPES.RAINY || climate === CLIMATE_TYPES.COLD) {
+    return {
+      headline,
+      quote: `Cap off your cool night in ${cityName} with rich hot dum biryani handis, sizzling tandoori kebabs, and warm desserts.`
+    };
+  }
+  if (climate === CLIMATE_TYPES.HOT) {
+    return {
+      headline,
+      quote: `End your warm night in ${cityName} with aromatic biryanis, savory rolls, chilled spiced majjiga, and creamy kulfi.`
+    };
+  }
+  return {
+    headline,
+    quote: `Tonight's curated dinner in ${cityName}: slow-cooked royal biryanis, butter naan with creamy curries, and indulgent desserts.`
+  };
+}
+
+/**
+ * Get personalized culinary recommendations taking BOTH Location, Climate, AND Time of Day into account.
+ */
+export function getRegionalClimateSuggestions(
+  location,
+  weather,
+  mood,
+  climateOverride = null,
+  mealTimeOverride = null
+) {
+  const regionKey = detectLocationRegion(location);
+  const activeClimate = climateOverride || detectClimateCategory(weather, mood);
+  const activeMealTime = mealTimeOverride || detectCurrentMealTime(weather?.timezone);
+  const cityName = location?.name || 'Your Area';
+  const meta = CLIMATE_METADATA[activeClimate] || CLIMATE_METADATA[CLIMATE_TYPES.PLEASANT];
+  const mealMeta = MEAL_TIME_METADATA[activeMealTime] || MEAL_TIME_METADATA[MEAL_TIMES.NIGHT];
+
+  // 1. Check if regional database has items for this region
+  const regionalData = REGIONAL_FOOD_DATABASE[regionKey];
+
+  // Gather candidate items from regional data or global fallback
+  let rawItems = [];
+  let regionTitle = `${cityName} Curated Favorites`;
+  let regionEmoji = '📍';
+  let regionName = cityName;
+
+  if (regionalData) {
+    regionTitle = regionalData.regionTitle || regionTitle;
+    regionEmoji = regionalData.regionEmoji || regionEmoji;
+    regionName = regionalData.regionName || regionName;
+
+    // Collect all unique items across profiles for this region
+    const profileValues = Object.values(regionalData.climateProfiles || {});
+    profileValues.forEach((p) => {
+      if (Array.isArray(p.items)) {
+        rawItems.push(...p.items);
+      }
+    });
+  }
+
+  // If no regional items found, load from global climate database
+  if (rawItems.length === 0) {
+    Object.values(GLOBAL_CLIMATE_DATABASE).forEach((p) => {
+      if (Array.isArray(p.items)) {
+        rawItems.push(...p.items);
+      }
+    });
+  }
+
+  // Deduplicate items by ID
+  const seenIds = new Set();
+  const uniqueItems = [];
+  rawItems.forEach((item) => {
+    if (!seenIds.has(item.id)) {
+      seenIds.add(item.id);
+      uniqueItems.push(item);
+    }
+  });
+
+  // Score each item based on BOTH activeMealTime AND activeClimate
+  const scoredItems = uniqueItems.map((item) => {
+    const itemMealTimes = inferMealTimes(item);
+    const itemClimates = inferClimates(item);
+    let score = 0;
+
+    // Meal Time match (highest weight)
+    const matchesMeal = itemMealTimes.includes(activeMealTime);
+    if (matchesMeal) {
+      score += 100;
+    } else if (itemMealTimes.includes('all')) {
+      score += 40;
+    }
+
+    // Climate match
+    const matchesClimate = itemClimates.includes(activeClimate);
+    if (matchesClimate) {
+      score += 60;
+    } else if (itemClimates.includes('all')) {
+      score += 30;
+    }
+
+    // Quality weight
+    score += Number(item.rating || 4.5) * 2;
+
+    const assignedMealBadge = item.mealBadge || getMealBadge(itemMealTimes);
+
+    return {
+      ...item,
+      score,
+      matchesMeal,
+      matchesClimate,
+      mealBadge: assignedMealBadge,
+      swiggyUrl: getSwiggySearchUrl(item.searchQuery || item.name, location?.name)
+    };
+  });
+
+  // Sort by score descending so the best matching food appears first
+  scoredItems.sort((a, b) => b.score - a.score);
+
+  // Filter items matching active meal time
+  const mealMatchingItems = scoredItems.filter((i) => i.matchesMeal);
+  const finalItems = mealMatchingItems.length >= 3 ? mealMatchingItems : scoredItems;
+
+  const pairing = generateContextualPairing(cityName, activeMealTime, activeClimate);
 
   return {
-    regionKey: REGIONS.GLOBAL,
-    regionName: cityName,
-    regionTitle: `${cityName} Curated Favorites`,
-    regionEmoji: '📍',
+    regionKey: regionalData ? regionKey : REGIONS.GLOBAL,
+    regionName,
+    regionTitle,
+    regionEmoji,
     climateKey: activeClimate,
     climateLabel: meta.label,
     climateEmoji: meta.emoji,
     accentColor: meta.accentColor,
     atmosphereTip: meta.atmosphereTip,
-    headline: fallbackProfile.headline,
-    pairingQuote: `Tailored to ${cityName}'s atmosphere: ${fallbackProfile.pairingQuote}`,
-    items: (fallbackProfile.items || []).map((item) => ({
-      ...item,
-      swiggyUrl: getSwiggySearchUrl(item.searchQuery || item.name, location?.name)
-    }))
+    mealTimeKey: activeMealTime,
+    mealTimeLabel: mealMeta.label,
+    mealTimeShortLabel: mealMeta.shortLabel,
+    mealTimeEmoji: mealMeta.emoji,
+    mealTimeRange: mealMeta.timeRange,
+    mealTimeTagline: mealMeta.tagline,
+    headline: pairing.headline,
+    pairingQuote: pairing.quote,
+    items: finalItems
   };
 }
 
