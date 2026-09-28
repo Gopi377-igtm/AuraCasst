@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import {
   Utensils,
   ExternalLink,
@@ -15,7 +15,12 @@ import {
   Check,
   Leaf,
   Compass,
-  Navigation
+  Navigation,
+  X,
+  Zap,
+  Sun,
+  CloudRain,
+  Snowflake
 } from 'lucide-react';
 import {
   CLIMATE_TYPES,
@@ -24,6 +29,7 @@ import {
   detectClimateCategory,
   detectLocationRegion,
   getRegionalClimateSuggestions,
+  searchFoodCraving,
   getSwiggySearchUrl,
   MEAL_TIMES,
   MEAL_TIME_METADATA,
@@ -37,25 +43,35 @@ export default function FoodSuggestions({
   unit = 'C',
   onSelectLocation
 }) {
+  // Live ticking clock to update time display & auto-transition slots in real time
+  const [currentTime, setCurrentTime] = useState(() => new Date());
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      setCurrentTime(new Date());
+    }, 30000); // Check every 30 seconds
+    return () => clearInterval(timer);
+  }, []);
+
   // Current natural climate detected by the engine from real-time meteorological variables
   const autoClimateKey = useMemo(
     () => detectClimateCategory(weather, mood),
     [weather, mood]
   );
 
-  // Active selected climate (defaults to auto-detected weather)
+  // Active selected climate (defaults to real-time auto-detected weather)
   const [selectedClimateKey, setSelectedClimateKey] = useState(null);
   const activeClimateKey = selectedClimateKey || autoClimateKey;
 
-  // Current natural meal time detected by the engine from local/timezone hour
-  const autoMealTimeKey = useMemo(
+  // Current natural meal time detected by the engine strictly from local/timezone hour in the backend
+  // - Early morning up to 10:30 AM: Tiffins
+  // - 11:00 AM to 3:00 PM: Lunch
+  // - 3:00 PM to 7:00 PM: Evening Chill
+  // - 7:01 PM to 12:00 AM: Dinner
+  const activeMealTimeKey = useMemo(
     () => detectCurrentMealTime(weather?.timezone),
-    [weather?.timezone]
+    [weather?.timezone, currentTime]
   );
-
-  // Active selected meal time (defaults to auto-detected meal time)
-  const [selectedMealTimeKey, setSelectedMealTimeKey] = useState(null);
-  const activeMealTimeKey = selectedMealTimeKey || autoMealTimeKey;
 
   // Curated regional & climate-aware suggestions derived dynamically from location, climate, and meal time
   const suggestionData = useMemo(() => {
@@ -64,9 +80,9 @@ export default function FoodSuggestions({
       weather,
       mood,
       selectedClimateKey,
-      selectedMealTimeKey
+      activeMealTimeKey
     );
-  }, [location, weather, mood, selectedClimateKey, selectedMealTimeKey]);
+  }, [location, weather, mood, selectedClimateKey, activeMealTimeKey]);
 
   // Detected regional key for matching active quick pill
   const activeRegionKey = useMemo(() => {
@@ -79,6 +95,26 @@ export default function FoodSuggestions({
   const [customSearchQuery, setCustomSearchQuery] = useState('');
   const [copiedId, setCopiedId] = useState(null);
 
+  // Quick craving shortcuts
+  const popularCravings = [
+    'Biryani',
+    'Pizza',
+    'Momos',
+    'Ice Cream',
+    'Burgers',
+    'Filter Coffee',
+    'Dosa',
+    'Samosa',
+    'Sandwich',
+    'Maggi & Noodles'
+  ];
+
+  // Dynamic Craving search results across the entire culinary database
+  const cravingResults = useMemo(() => {
+    if (!customSearchQuery.trim()) return null;
+    return searchFoodCraving(customSearchQuery.trim(), location?.name);
+  }, [customSearchQuery, location?.name]);
+
   // Current temperature formatted
   const currentTemp = weather?.current?.tempC;
   const formattedTemp =
@@ -88,9 +124,16 @@ export default function FoodSuggestions({
         : `${Math.round(currentTemp)}°C`
       : null;
 
-  // Filter items by category and veg/non-veg
-  const filteredItems = useMemo(() => {
-    let items = suggestionData.items || [];
+  // Filter items:
+  // If craving search is active, show craving matches; otherwise show time-synced suggestions
+  const displayedItems = useMemo(() => {
+    let items = [];
+    if (customSearchQuery.trim() && cravingResults) {
+      items = cravingResults.matches;
+    } else {
+      items = suggestionData.items || [];
+    }
+
     if (vegOnly) {
       items = items.filter((item) => item.isVeg);
     }
@@ -100,7 +143,7 @@ export default function FoodSuggestions({
       );
     }
     return items;
-  }, [suggestionData.items, vegOnly, selectedCategory]);
+  }, [customSearchQuery, cravingResults, suggestionData.items, vegOnly, selectedCategory]);
 
   // Handle custom search redirection to Swiggy
   const handleCustomSearchSubmit = (e) => {
@@ -131,13 +174,18 @@ export default function FoodSuggestions({
     }
   };
 
+  // Clear craving search
+  const handleClearSearch = () => {
+    setCustomSearchQuery('');
+  };
+
   // Available category filters
   const categories = ['All', 'Comfort Food', 'Street Food', 'Snacks & Tea', 'Hearty Meals', 'Beverages', 'Sweet Treats'];
 
   return (
     <section
       id="food-suggestions"
-      aria-label="Climate & Regional Food Suggestions"
+      aria-label="Climate & Timing-Accurate Food Suggestions"
       className="mt-8 mb-6 relative z-10 w-full"
     >
       <div className="glass-card rounded-3xl p-6 sm:p-8 lg:p-10 border border-white/10 shadow-2xl relative overflow-hidden backdrop-blur-xl">
@@ -151,11 +199,11 @@ export default function FoodSuggestions({
         <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-white/10 relative z-10">
           <div className="space-y-2">
             <div className="flex items-center flex-wrap gap-2.5">
-              <span className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-amber-500 to-rose-500 flex items-center justify-center shadow-lg shadow-amber-500/20 text-white">
+              <span className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-amber-500 via-orange-500 to-rose-500 flex items-center justify-center shadow-lg shadow-orange-500/25 text-white">
                 <Utensils className="w-5 h-5" />
               </span>
               <h2 className="text-2xl sm:text-3xl font-extrabold text-white font-display tracking-tight">
-                Climate & Regional Food Pairings
+                Atmospheric Culinary Pairings
               </h2>
               <span className="px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider bg-orange-500/20 text-orange-400 border border-orange-500/30 flex items-center gap-1.5 shadow-sm">
                 <span className="w-2 h-2 rounded-full bg-[#FC8019] animate-pulse" />
@@ -163,14 +211,14 @@ export default function FoodSuggestions({
               </span>
             </div>
             <p className="text-sm text-slate-300 max-w-2xl leading-relaxed">
-              Real-time atmospheric culinary recommendations tailored to{' '}
-              <span className="text-amber-300 font-semibold">{suggestionData.regionName}</span>
-              's local food culture & climate. Click any dish to order directly on{' '}
+              Curated strictly for the active time & the{' '}
+              <span className="text-amber-300 font-semibold">Climate Mood</span> in{' '}
+              <span className="text-white font-bold">{suggestionData.regionName}</span>. Order fresh on{' '}
               <span className="text-orange-400 font-bold">Swiggy</span>!
             </p>
           </div>
 
-          {/* Regional Identity, Meal Time & Detected Climate Badges */}
+          {/* Regional Identity, Dining Hour & Detected Climate Badges */}
           <div className="flex flex-wrap items-center gap-3">
             {/* Active Region Pill */}
             <div
@@ -190,18 +238,15 @@ export default function FoodSuggestions({
             </div>
 
             {/* Current Meal Time Pill */}
-            <div className="px-3.5 py-2.5 rounded-2xl bg-indigo-500/10 border border-indigo-500/25 text-indigo-200 backdrop-blur-md flex items-center gap-2.5 shadow-sm">
+            <div className="px-3.5 py-2.5 rounded-2xl bg-indigo-500/15 border border-indigo-400/30 text-indigo-200 backdrop-blur-md flex items-center gap-2.5 shadow-sm">
               <span className="text-2xl">{suggestionData.mealTimeEmoji}</span>
               <div>
-                <p className="text-[10px] uppercase font-bold tracking-wider text-indigo-400 flex items-center gap-1">
+                <p className="text-[10px] uppercase font-bold tracking-wider text-indigo-300 flex items-center gap-1">
                   <Clock className="w-3 h-3" />
-                  {selectedMealTimeKey ? 'Selected Meal' : 'Current Dining Hour'}
+                  Dining Category
                 </p>
                 <p className="text-xs font-bold text-white flex items-center gap-1.5">
-                  {suggestionData.mealTimeShortLabel}
-                  <span className="text-indigo-300/80 font-normal text-[11px] hidden sm:inline">
-                    ({suggestionData.mealTimeRange.split('–')[0].trim()})
-                  </span>
+                  {suggestionData.mealTimeLabel}
                 </p>
               </div>
             </div>
@@ -212,7 +257,7 @@ export default function FoodSuggestions({
               <div>
                 <p className="text-[10px] uppercase font-bold tracking-wider text-slate-400 flex items-center gap-1">
                   <Sparkles className="w-3 h-3 text-amber-400" />
-                  {selectedClimateKey ? 'Previewing Climate' : 'Detected Climate'}
+                  {selectedClimateKey ? 'Previewing Weather' : 'Current Weather'}
                 </p>
                 <p className="text-xs font-bold text-white flex items-center gap-1.5">
                   {suggestionData.climateLabel}
@@ -227,15 +272,178 @@ export default function FoodSuggestions({
           </div>
         </div>
 
-        {/* Quick Regional Hub Switcher Bar */}
-        <div className="pt-5 pb-3">
+
+        {/* PROMINENT FOOD CRAVING SEARCH BAR */}
+        <div className="pt-3 pb-4">
+          <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-indigo-500/10 border border-orange-500/25 shadow-lg relative overflow-hidden">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 mb-3">
+              <div className="space-y-0.5">
+                <span className="text-xs font-extrabold uppercase tracking-wider text-orange-400 flex items-center gap-1.5">
+                  <Zap className="w-3.5 h-3.5" />
+                  Got a Food Craving? Search Any Dish You Crave
+                </span>
+                <p className="text-xs text-slate-300">
+                  Search any craving to instantly order doorstep delivery on{' '}
+                  <span className="text-orange-400 font-bold">Swiggy</span> in{' '}
+                  <span className="text-white font-semibold">{suggestionData.regionName}</span>.
+                </p>
+              </div>
+
+              {customSearchQuery && (
+                <button
+                  onClick={handleClearSearch}
+                  className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors self-start md:self-auto"
+                >
+                  <X className="w-3.5 h-3.5" />
+                  Clear Craving Search
+                </button>
+              )}
+            </div>
+
+            {/* Search Input Form */}
+            <form onSubmit={handleCustomSearchSubmit} className="flex items-center gap-2">
+              <div className="relative flex-grow">
+                <Search className="w-4 h-4 text-orange-400 absolute left-3.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                <input
+                  type="text"
+                  value={customSearchQuery}
+                  onChange={(e) => setCustomSearchQuery(e.target.value)}
+                  placeholder="Craving Biryani, Pizza, Momos, Ice cream, Coffee, Dosa...?"
+                  className="w-full pl-10 pr-9 py-2.5 rounded-xl bg-black/50 border border-white/20 text-xs sm:text-sm text-white placeholder-slate-400 focus:outline-none focus:border-orange-500 focus:ring-2 focus:ring-orange-500/30 transition-all"
+                />
+                {customSearchQuery && (
+                  <button
+                    type="button"
+                    onClick={handleClearSearch}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
+              <button
+                type="submit"
+                disabled={!customSearchQuery.trim()}
+                className="px-4 py-2.5 rounded-xl bg-[#FC8019] hover:bg-[#e47214] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs sm:text-sm font-bold transition-all shadow-md shadow-orange-500/30 flex items-center gap-1.5 whitespace-nowrap shrink-0 hover:scale-[1.02] active:scale-[0.98]"
+              >
+                <span>Search Swiggy</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </button>
+            </form>
+
+            {/* Quick Craving Shortcut Chips */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pt-3 pb-1 scrollbar-none">
+              <span className="text-[11px] font-semibold text-slate-400 whitespace-nowrap shrink-0 mr-1">
+                Top Cravings:
+              </span>
+              {popularCravings.map((craving) => {
+                const isActive = customSearchQuery.toLowerCase() === craving.toLowerCase();
+                return (
+                  <button
+                    key={craving}
+                    type="button"
+                    onClick={() => setCustomSearchQuery(craving)}
+                    className={`px-3 py-1 rounded-xl text-xs font-medium transition-all whitespace-nowrap border ${
+                      isActive
+                        ? 'bg-orange-500 text-white font-bold border-orange-400 shadow-sm'
+                        : 'bg-white/5 hover:bg-white/10 text-slate-300 border-white/10 hover:border-orange-400/40'
+                    }`}
+                  >
+                    {craving}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        {/* Climate Condition Simulator & Selector Tabs */}
+        <div className="pt-1 pb-4">
           <div className="flex items-center justify-between gap-3 mb-2.5">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
+              Climate Mood Simulator (Adapts dishes to Weather Changes)
+            </span>
+            {selectedClimateKey && (
+              <button
+                onClick={() => setSelectedClimateKey(null)}
+                className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold transition-colors"
+              >
+                <RotateCcw className="w-3 h-3" />
+                Reset to Live Weather
+              </button>
+            )}
+          </div>
+
+          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+            {/* Live Weather Button */}
+            <button
+              onClick={() => setSelectedClimateKey(null)}
+              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                !selectedClimateKey
+                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md shadow-amber-500/25 ring-2 ring-amber-400/40'
+                  : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+              }`}
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              <span>Current Weather ({CLIMATE_METADATA[autoClimateKey]?.emoji})</span>
+            </button>
+
+            {/* Individual Climate Tabs */}
+            {Object.values(CLIMATE_METADATA).map((c) => {
+              const isActive = activeClimateKey === c.key;
+              return (
+                <button
+                  key={c.key}
+                  onClick={() => setSelectedClimateKey(c.key)}
+                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 ${
+                    isActive
+                      ? 'bg-white/20 text-white border border-white/30 shadow-lg font-bold'
+                      : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
+                  }`}
+                >
+                  <span>{c.emoji}</span>
+                  <span>{c.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
+        {/* Climate & Timing Context Insight Banner */}
+        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div className="space-y-1.5">
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
+                {suggestionData.mealTimeEmoji} {suggestionData.mealTimeLabel}
+              </span>
+              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
+                {suggestionData.climateEmoji} {suggestionData.climateLabel}
+              </span>
+            </div>
+            <h3 className="text-base font-bold text-white font-display flex items-center gap-2">
+              <span>{suggestionData.headline}</span>
+            </h3>
+            <p className="text-xs text-slate-300 leading-relaxed max-w-3xl">
+              {suggestionData.pairingQuote}
+            </p>
+          </div>
+          <div className="shrink-0 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium flex items-center gap-2">
+            <Flame className="w-4 h-4 text-amber-400 shrink-0" />
+            <span className="hidden sm:inline">{suggestionData.atmosphereTip}</span>
+            <span className="sm:hidden">Atmospheric Pairing</span>
+          </div>
+        </div>
+
+        {/* Quick Regional Hub Switcher Bar */}
+        <div className="pb-4">
+          <div className="flex items-center justify-between gap-3 mb-2">
+            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
               <Compass className="w-3.5 h-3.5 text-amber-400" />
-              Quick Culinary Hub Switcher (Adapts Location & Food Instantly)
+              Quick Culinary Hub Switcher
             </span>
             <span className="text-[11px] text-slate-400 hidden sm:inline">
-              Click any city to switch location
+              Click any city to switch location & regional flavors
             </span>
           </div>
 
@@ -261,142 +469,8 @@ export default function FoodSuggestions({
           </div>
         </div>
 
-        {/* Meal Time & Dining Hours Selector Tabs */}
-        <div className="pt-2 pb-3">
-          <div className="flex items-center justify-between gap-3 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Clock className="w-3.5 h-3.5 text-indigo-400" />
-              Time-Of-Day Dining Schedule (Accurate to Breakfast, Lunch, Snacks & Dinner)
-            </span>
-            {selectedMealTimeKey && (
-              <button
-                onClick={() => setSelectedMealTimeKey(null)}
-                className="text-xs text-indigo-400 hover:text-indigo-300 flex items-center gap-1 font-semibold transition-colors"
-              >
-                <RotateCcw className="w-3 h-3" />
-                Reset to Current Time ({MEAL_TIME_METADATA[autoMealTimeKey]?.shortLabel})
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {/* Auto Live Time Button */}
-            <button
-              onClick={() => setSelectedMealTimeKey(null)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                !selectedMealTimeKey
-                  ? 'bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/25 ring-2 ring-indigo-400/40'
-                  : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
-              }`}
-            >
-              <Clock className="w-3.5 h-3.5" />
-              <span>Current Time ({MEAL_TIME_METADATA[autoMealTimeKey]?.emoji} {MEAL_TIME_METADATA[autoMealTimeKey]?.shortLabel})</span>
-            </button>
-
-            {/* Individual Meal Time Tabs */}
-            {Object.values(MEAL_TIME_METADATA).map((m) => {
-              const isActive = activeMealTimeKey === m.key;
-              return (
-                <button
-                  key={m.key}
-                  onClick={() => setSelectedMealTimeKey(m.key)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-indigo-500/30 text-white border border-indigo-400/50 shadow-lg font-bold'
-                      : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
-                  }`}
-                >
-                  <span>{m.emoji}</span>
-                  <span>{m.label}</span>
-                  <span className="text-[10px] text-slate-400 font-normal hidden sm:inline">
-                    ({m.timeRange})
-                  </span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Climate Condition Simulator & Selector Tabs */}
-        <div className="pt-2 pb-4">
-          <div className="flex items-center justify-between gap-3 mb-2.5">
-            <span className="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <Sparkles className="w-3.5 h-3.5 text-amber-400" />
-              Pairings By Weather Condition
-            </span>
-            {selectedClimateKey && (
-              <button
-                onClick={() => setSelectedClimateKey(null)}
-                className="text-xs text-amber-400 hover:text-amber-300 flex items-center gap-1 font-semibold transition-colors"
-              >
-                <RotateCcw className="w-3 h-3" />
-                Reset to Current Weather
-              </button>
-            )}
-          </div>
-
-          <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
-            {/* Auto Live Button */}
-            <button
-              onClick={() => setSelectedClimateKey(null)}
-              className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                !selectedClimateKey
-                  ? 'bg-gradient-to-r from-amber-500 to-orange-500 text-slate-950 shadow-md shadow-amber-500/25'
-                  : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
-              }`}
-            >
-              <Sparkles className="w-3.5 h-3.5" />
-              <span>Current Weather ({CLIMATE_METADATA[autoClimateKey]?.emoji})</span>
-            </button>
-
-            {/* Individual Climate Tabs */}
-            {Object.values(CLIMATE_METADATA).map((c) => {
-              const isActive = activeClimateKey === c.key;
-              return (
-                <button
-                  key={c.key}
-                  onClick={() => setSelectedClimateKey(c.key)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-semibold transition-all whitespace-nowrap flex items-center gap-1.5 ${
-                    isActive
-                      ? 'bg-white/20 text-white border border-white/30 shadow-lg'
-                      : 'bg-white/5 hover:bg-white/10 text-slate-300 border border-white/10'
-                  }`}
-                >
-                  <span>{c.emoji}</span>
-                  <span>{c.label}</span>
-                </button>
-              );
-            })}
-          </div>
-        </div>
-
-        {/* Climate & Regional Insight Banner */}
-        <div className="p-4 rounded-2xl bg-white/5 border border-white/10 mb-6 flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
-          <div className="space-y-1.5">
-            <div className="flex items-center gap-2 flex-wrap">
-              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 flex items-center gap-1">
-                {suggestionData.mealTimeEmoji} {suggestionData.mealTimeLabel} ({suggestionData.mealTimeRange})
-              </span>
-              <span className="px-2.5 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-500/20 text-amber-300 border border-amber-500/30 flex items-center gap-1">
-                {suggestionData.climateEmoji} {suggestionData.climateLabel}
-              </span>
-            </div>
-            <h3 className="text-base font-bold text-white font-display flex items-center gap-2">
-              <span>{suggestionData.headline}</span>
-            </h3>
-            <p className="text-xs text-slate-300 leading-relaxed max-w-3xl">
-              {suggestionData.pairingQuote}
-            </p>
-          </div>
-          <div className="shrink-0 px-3.5 py-2 rounded-xl bg-amber-500/10 border border-amber-500/20 text-amber-300 text-xs font-medium flex items-center gap-2">
-            <Flame className="w-4 h-4 text-amber-400 shrink-0" />
-            <span className="hidden sm:inline">{suggestionData.atmosphereTip}</span>
-            <span className="sm:hidden">Atmospheric Craving</span>
-          </div>
-        </div>
-
-        {/* Filter Bar & Quick Custom Swiggy Search */}
-        <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-4 mb-6">
+        {/* Filter Bar: Categories + Veg Toggle */}
+        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4 mb-6 pt-2">
           {/* Category Filter Pills */}
           <div className="flex items-center gap-1.5 flex-wrap">
             {categories.map((cat) => (
@@ -427,42 +501,66 @@ export default function FoodSuggestions({
             </button>
           </div>
 
-          {/* Direct Custom Dish Search on Swiggy */}
-          <form
-            onSubmit={handleCustomSearchSubmit}
-            className="flex items-center gap-2 w-full lg:w-auto"
-          >
-            <div className="relative flex-grow lg:w-64">
-              <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                value={customSearchQuery}
-                onChange={(e) => setCustomSearchQuery(e.target.value)}
-                placeholder="Search any dish on Swiggy..."
-                className="w-full pl-9 pr-3 py-2 rounded-xl bg-black/40 border border-white/15 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-orange-500/60 focus:ring-1 focus:ring-orange-500/30 transition-all"
-              />
+          {/* Craving Matches indicator if searching */}
+          {customSearchQuery && (
+            <div className="text-xs text-orange-400 font-semibold flex items-center gap-1.5">
+              <span>Showing craving matches for "{customSearchQuery}"</span>
+              <button
+                onClick={handleClearSearch}
+                className="underline hover:text-orange-300 text-slate-400 text-[11px]"
+              >
+                (Clear)
+              </button>
             </div>
-            <button
-              type="submit"
-              disabled={!customSearchQuery.trim()}
-              className="px-3.5 py-2 rounded-xl bg-[#FC8019] hover:bg-[#e47214] disabled:opacity-50 disabled:cursor-not-allowed text-white text-xs font-bold transition-all shadow-md shadow-orange-500/25 flex items-center gap-1.5 whitespace-nowrap shrink-0"
-            >
-              <span>Search Swiggy</span>
-              <ExternalLink className="w-3.5 h-3.5" />
-            </button>
-          </form>
+          )}
         </div>
 
+        {/* Active Craving Banner if user searched */}
+        {customSearchQuery && (
+          <div className="mb-6 p-4 rounded-2xl bg-orange-500/10 border border-orange-500/30 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-bold text-orange-400 uppercase tracking-wider">
+                Instant Swiggy Delivery for "{customSearchQuery}" in {suggestionData.regionName}
+              </p>
+              <p className="text-xs text-slate-300 mt-0.5">
+                Craving what you searched? Click below to order directly on Swiggy with live delivery to your doorstep.
+              </p>
+            </div>
+            <a
+              href={getSwiggySearchUrl(customSearchQuery, location?.name)}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="px-4 py-2 rounded-xl bg-[#FC8019] hover:bg-[#e47214] text-white text-xs font-bold transition-all shadow-md shadow-orange-500/25 flex items-center gap-1.5 shrink-0"
+            >
+              <span>Order "{customSearchQuery}" on Swiggy</span>
+              <ExternalLink className="w-3.5 h-3.5" />
+            </a>
+          </div>
+        )}
+
         {/* Food Items Showcase Grid */}
-        {filteredItems.length === 0 ? (
+        {displayedItems.length === 0 ? (
           <div className="text-center py-12 px-4 rounded-2xl bg-white/5 border border-white/10">
             <Utensils className="w-8 h-8 text-slate-500 mx-auto mb-2" />
-            <p className="text-slate-300 text-sm font-semibold">No food items matched your filter.</p>
-            <p className="text-slate-500 text-xs mt-1">Try switching categories or unchecking 'Veg Only'.</p>
+            <p className="text-slate-300 text-sm font-semibold">No food items matched your current filter.</p>
+            <p className="text-slate-500 text-xs mt-1">
+              Try switching categories, clearing search, or unchecking 'Veg Only'.
+            </p>
+            {customSearchQuery && (
+              <a
+                href={getSwiggySearchUrl(customSearchQuery, location?.name)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#FC8019] text-white text-xs font-bold shadow-md shadow-orange-500/25"
+              >
+                <span>Search "{customSearchQuery}" directly on Swiggy</span>
+                <ExternalLink className="w-3.5 h-3.5" />
+              </a>
+            )}
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {filteredItems.map((item) => {
+            {displayedItems.map((item) => {
               const swiggyUrl =
                 item.swiggyUrl ||
                 getSwiggySearchUrl(item.searchQuery || item.name, location?.name);
@@ -480,7 +578,8 @@ export default function FoodSuggestions({
                       loading="lazy"
                       onError={(e) => {
                         e.target.onerror = null;
-                        e.target.src = 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80';
+                        e.target.src =
+                          'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?auto=format&fit=crop&w=700&q=80';
                       }}
                       className="w-full h-full object-cover object-center group-hover:scale-105 transition-transform duration-500"
                     />
@@ -600,7 +699,8 @@ export default function FoodSuggestions({
                 Instant Doorstep Delivery via Swiggy
               </p>
               <p className="text-xs text-slate-300">
-                Craving what you see? Swiggy connects you to the top cloud kitchens and authentic restaurants in {suggestionData.regionName}.
+                Craving what you see? Swiggy connects you to top cloud kitchens and authentic restaurants in{' '}
+                {suggestionData.regionName}.
               </p>
             </div>
           </div>
